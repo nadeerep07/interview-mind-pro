@@ -250,21 +250,21 @@ ${analysis.tips.map((t: string) => `- ${t}`).join("\n")}`;
                 <AnalysisResultCard
                   title="Key Strengths"
                   category="strengths"
-                  score={analysis.communicationScore} // FIXED
+                  score={analysis.communicationScore}
                   items={analysis.strengths}
                 />
 
                 <AnalysisResultCard
                   title="Areas to Improve"
                   category="improvements"
-                  score={analysis.clarityScore} // FIXED
+                  score={analysis.clarityScore} 
                   items={analysis.improvements}
                 />
 
                 <AnalysisResultCard
                   title="Pro Tips"
                   category="tips"
-                  score={analysis.confidenceScore} // FIXED (use confidence or any other)
+                  score={analysis.confidenceScore} 
                   items={analysis.tips}
                 />
               </div>
