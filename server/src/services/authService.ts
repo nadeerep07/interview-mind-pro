@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs"
 import { User } from "../models/User"
-import { generateToken } from "../middleware/auth"
+import { generateToken } from "../middleware/authMiddleware"
 
 export const authService = {
   async register(email: string, password: string, name: string) {

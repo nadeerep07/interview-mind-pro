@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { authMiddleware } from "../middleware/auth"
+import { authMiddleware } from "../middleware/authMiddleware"
 import { growthService } from "../services/interviewService"
 
 const router = Router()

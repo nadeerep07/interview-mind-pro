@@ -1,40 +1,23 @@
-import express, { type Express } from "express"
-import cors from "cors"
-import { config } from "./config/env"
-import connectDB from "./config/database"
-import { errorHandler } from "./middleware/errorHandler"
-import { authRoutes } from "./routes/auth"
-import { interviewRoutes } from "./routes/interviews"
-import { vocabularyRoutes } from "./routes/vocabulary"
-import { growthRoutes } from "./routes/growth"
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import { connectDB } from "./config/db";
+import authRoutes from "./routes/authRoutes";
 
-const app: Express = express()
+dotenv.config();
+connectDB();
 
-// Middleware
-app.use(cors())
-app.use(express.json())
+const app = express();
+const PORT = process.env.PORT || 4000;
 
-// Database Connection
-connectDB()
+app.use(cors());
+app.use(express.json());
 
 // Routes
-app.use("/api/auth", authRoutes)
-app.use("/api/interviews", interviewRoutes)
-app.use("/api/vocabulary", vocabularyRoutes)
-app.use("/api/growth", growthRoutes)
+app.use("/api/auth", authRoutes);
 
-// Health check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Server is running" })
-})
+app.get("/", (req, res) => {
+  res.send("API Running...");
+});
 
-// Error Handler
-app.use(errorHandler)
-
-const PORT = config.PORT
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
-
-export default app
+app.listen(PORT, () => console.log(`🔥 Server running on port ${PORT}`));

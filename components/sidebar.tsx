@@ -21,15 +21,6 @@ export function Sidebar() {
       variant="default"
       className="hidden lg:flex flex-col w-64 border-r border-white/10 h-screen sticky top-0"
     >
-      <div className="p-6 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
-            <span className="text-white font-bold">I</span>
-          </div>
-          <GradientTextWrapper className="text-lg">InterviewMind</GradientTextWrapper>
-        </div>
-      </div>
-
       <nav className="flex-1 overflow-y-auto p-4 space-y-2">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href
