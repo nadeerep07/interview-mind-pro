@@ -1,20 +1,23 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
-import { GlowButton } from "./animated-components"
-import { GlassWrapper, GradientTextWrapper } from "./glass-wrapper"
-import { Menu, X, LogOut, User } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
+import { GlowButton } from "./animated-components";
+import { GlassWrapper, GradientTextWrapper } from "./glass-wrapper";
+import { Menu, X, LogOut, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-export function Navbar() {
-  const { isAuthenticated, user, logout } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
+export default function Navbar() {
+  const { isAuthenticated, user, logout } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter(); // ✅ FIXED — now inside component
 
   const handleLogout = async () => {
-    await logout()
-    setIsOpen(false)
-  }
+    await logout();
+    setIsOpen(false);
+    router.push("/"); // redirect home after logout
+  };
 
   return (
     <GlassWrapper variant="default" className="sticky top-0 z-50 border-b border-white/10 w-full">
@@ -53,7 +56,6 @@ export function Navbar() {
             {isAuthenticated ? (
               <div className="flex items-center gap-4">
 
-                {/* Name Display */}
                 <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-white/10">
                   <User className="w-4 h-4 text-purple-400" />
                   <span className="text-sm text-foreground">{user?.name}</span>
@@ -79,7 +81,7 @@ export function Navbar() {
             )}
           </div>
 
-          {/* Mobile Button */}
+          {/* Mobile Menu Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden p-2 rounded-lg hover:bg-white/10"
@@ -127,5 +129,5 @@ export function Navbar() {
         )}
       </div>
     </GlassWrapper>
-  )
+  );
 }

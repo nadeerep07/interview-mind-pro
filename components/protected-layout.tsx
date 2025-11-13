@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { Navbar } from "./navbar"
+import Navbar from "./navbar";
 import { Sidebar } from "./sidebar"
 import { LoadingSpinner } from "./animated-components"
 import { useEffect } from "react"

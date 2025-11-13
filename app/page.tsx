@@ -1,13 +1,10 @@
+"use client"
+
 import Link from "next/link"
 import { GlowButton } from "@/components/animated-components"
 import { GradientTextWrapper } from "@/components/glass-wrapper"
-import { Navbar } from "@/components/navbar"
+import Navbar from "@/components/navbar" // ⬅ correct import (default export)
 import { Brain, Zap, BarChart3, Users } from "lucide-react"
-
-export const metadata = {
-  title: "InterviewMind Pro - Master Your Interviews with AI",
-  description: "AI-powered interview coaching platform with real-time analysis and personalized feedback",
-}
 
 export default function HomePage() {
   const features = [
@@ -39,10 +36,9 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden px-4 py-20 sm:py-32">
-        {/* Background gradient */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl opacity-50"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl opacity-50"></div>
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl opacity-50" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl opacity-50" />
         </div>
 
         <div className="max-w-4xl mx-auto text-center">
@@ -51,18 +47,18 @@ export default function HomePage() {
           </h1>
 
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Get real-time feedback, improve your communication skills, and land your dream job with InterviewMind Pro's
+            Get real-time feedback, improve your communication skills, and land your dream job with InterviewMind Pro’s
             AI-powered coaching platform.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/register">
-              <GlowButton variant="primary" size="lg" className="w-full sm:w-auto">
+              <GlowButton variant="primary" size="lg">
                 Start Free Today
               </GlowButton>
             </Link>
             <Link href="#features">
-              <GlowButton variant="outline" size="lg" className="w-full sm:w-auto">
+              <GlowButton variant="outline" size="lg">
                 Learn More
               </GlowButton>
             </Link>
@@ -87,9 +83,9 @@ export default function HomePage() {
             return (
               <div
                 key={index}
-                className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 group"
+                className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl p-6 hover:border-purple-500/50 transition-all"
               >
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-500/20 to-blue-500/20 flex items-center justify-center mb-4 group-hover:from-purple-500/40 group-hover:to-blue-500/40 transition-all duration-300">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-500/20 to-blue-500/20 flex items-center justify-center mb-4">
                   <Icon className="w-6 h-6 text-purple-400" />
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
@@ -115,11 +111,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 px-4 py-12">
-        <div className="max-w-6xl mx-auto text-center text-muted-foreground text-sm">
-          <p>&copy; 2025 InterviewMind Pro. All rights reserved.</p>
-        </div>
+      <footer className="border-t border-white/10 px-4 py-12 text-center text-muted-foreground text-sm">
+        © 2025 InterviewMind Pro. All rights reserved.
       </footer>
     </div>
   )
