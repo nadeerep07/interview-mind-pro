@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         stack: data.stack || [],
         createdAt: data.createdAt ?? "",
         updatedAt: data.updatedAt ?? "",
+        language: data.language || "en",
       };
 
       setUser(normalizedUser);
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       stack: data.user.stack || [],
       createdAt: data.user.createdAt ?? "",
       updatedAt: data.user.updatedAt ?? "",
+      language: data.user.language || "en",
     };
 
     localStorage.setItem("token", data.token);
@@ -115,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       stack: data.user.stack || [],
       createdAt: data.user.createdAt ?? "",
       updatedAt: data.user.updatedAt ?? "",
+      language: data.user.language || "en",
     };
 
     localStorage.setItem("token", data.token);

@@ -14,6 +14,7 @@ import { Save, LogOut } from "lucide-react";
 
 import SuccessModal from "@/components/success-modal";
 import ConfirmModal from "@/components/confirm-modal";
+import StackSelector from "@/components/stack-selector";
 
 export default function SettingsPage() {
   const { user, logout, updateUser } = useAuth();
@@ -24,7 +25,7 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    language: "en",
+    language: user?.language || "en",
     timezone: "UTC",
     notifications: true,
     emailUpdates: true,
@@ -45,7 +46,7 @@ export default function SettingsPage() {
             name: formData.name,
             email: formData.email,
             language: formData.language,
-            stack: formData.stack || [],
+            stack: formData.stack,
           }),
         }
       );
@@ -54,7 +55,7 @@ export default function SettingsPage() {
 
       if (data.success) {
         updateUser(data.user);
-        setSuccessModal(true); // show success modal
+        setSuccessModal(true);
       }
     } catch (err) {
       console.error(err);
@@ -97,6 +98,7 @@ export default function SettingsPage() {
             }
           />
 
+          {/* Language Selector */}
           <div className="grid grid-cols-2 gap-6">
             <SelectField
               label="Language"
@@ -126,6 +128,14 @@ export default function SettingsPage() {
               ]}
             />
           </div>
+
+          {/* 🔥 Stack Selector Added Here */}
+          <StackSelector
+            value={formData.stack}
+            onChange={(newStacks) =>
+              setFormData({ ...formData, stack: newStacks })
+            }
+          />
 
           <GlowButton
             variant="primary"

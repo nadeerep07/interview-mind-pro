@@ -7,6 +7,7 @@ export interface User {
   createdAt: string
   updatedAt: string
   stack?: string[]
+  language: string
 }
 
 export interface InterviewSession {
@@ -25,6 +26,7 @@ export interface InterviewSession {
   recordingUrl?: string
   createdAt: string
   updatedAt: string
+
 }
 
 export interface VocabularyWord {
