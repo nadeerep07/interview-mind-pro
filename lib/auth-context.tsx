@@ -9,8 +9,7 @@ import {
 } from "react";
 
 type User = {
-  id?: string;
-  _id?: string;
+  id: string;
   name: string;
   email: string;
 };
@@ -31,18 +30,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // -----------------------------
+  // LOAD USER FROM LOCALSTORAGE
+  // -----------------------------
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
 
     if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsed = JSON.parse(storedUser);
+
+      // Normalize ID
+      const normalizedUser: User = {
+        id: parsed.userId || parsed.id || parsed._id,
+        name: parsed.name,
+        email: parsed.email,
+      };
+
+      setUser(normalizedUser);
       setIsAuthenticated(true);
     }
 
     setLoading(false);
   }, []);
 
+  // -----------------------------
+  // LOGIN
+  // -----------------------------
   const login = async (email: string, password: string) => {
     setLoading(true);
 
@@ -59,14 +73,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await res.json();
 
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    const normalizedUser: User = {
+      id: data.user.userId || data.user.id || data.user._id,
+      name: data.user.name,
+      email: data.user.email,
+    };
 
-    setUser(data.user);
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(normalizedUser));
+
+    setUser(normalizedUser);
     setIsAuthenticated(true);
     setLoading(false);
   };
 
+  // -----------------------------
+  // REGISTER
+  // -----------------------------
   const register = async (email: string, password: string, name: string) => {
     setLoading(true);
 
@@ -83,14 +106,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await res.json();
 
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    const normalizedUser: User = {
+      id: data.user.userId || data.user.id || data.user._id,
+      name: data.user.name,
+      email: data.user.email,
+    };
 
-    setUser(data.user);
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(normalizedUser));
+
+    setUser(normalizedUser);
     setIsAuthenticated(true);
     setLoading(false);
   };
 
+  // -----------------------------
+  // LOGOUT
+  // -----------------------------
   const logout = async () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");

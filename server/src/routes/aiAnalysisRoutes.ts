@@ -1,5 +1,6 @@
 import { Router } from "express";
 import Groq from "groq-sdk";
+import { updateUserStats } from "../utils/updateUserStats";
 
 const router = Router();
 
@@ -9,13 +10,10 @@ const groq = new Groq({
 
 router.post("/analyze", async (req, res) => {
   try {
-    const { question, userResponse, interviewType } = req.body;
+    const { question, userResponse, interviewType, userId } = req.body;
 
-    if (!question || !userResponse) {
-      return res.status(400).json({
-        success: false,
-        error: "Question and response are required",
-      });
+    if (!userId) {
+      return res.status(400).json({ success: false, error: "Missing userId" });
     }
 
     const systemPrompt = `
@@ -51,16 +49,14 @@ ${userResponse}
 
     let content = completion.choices?.[0]?.message?.content;
 
-    if (!content) {
-      return res.json({ success: false, error: "Empty response from Groq" });
-    }
-
-    // remove code fences
     content = content.trim().replace(/```json|```/g, "");
 
     const analysis = JSON.parse(content);
 
-    res.json({ success: true, analysis });
+    // 🔥 Update stats here
+    const updatedStats = await updateUserStats(userId, analysis);
+
+    res.json({ success: true, analysis, updatedStats });
   } catch (error: any) {
     console.error("AI Analysis Error:", error);
     res.status(500).json({ success: false, error: error.message });
