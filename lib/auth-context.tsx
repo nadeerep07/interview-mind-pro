@@ -14,6 +14,7 @@ type AuthContextType = {
   isLoading: boolean;
   isAuthenticated: boolean;
   setUser: (u: User | null) => void;
+    updateUser: (u: Partial<User>) => void; 
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -135,6 +136,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = "/";
   };
 
+  const updateUser = (updated: Partial<User>) => {
+  setUser((prev) => {
+    if (!prev) return prev;
+
+    const newUser = { ...prev, ...updated };
+
+    localStorage.setItem("user", JSON.stringify(newUser));
+
+    return newUser;
+  });
+};
+
+
   return (
     <AuthContext.Provider
       value={{
@@ -145,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        updateUser,
       }}
     >
       {children}

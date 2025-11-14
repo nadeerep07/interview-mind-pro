@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth-context"
 import { Save, LogOut } from "lucide-react"
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth()
+  const { user, logout ,updateUser } = useAuth()
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -17,12 +17,36 @@ export default function SettingsPage() {
     timezone: "UTC",
     notifications: true,
     emailUpdates: true,
+    stack: user?.stack || [],
   })
 
-  const handleSave = async () => {
-    // Mock save - replace with actual backend call
-    console.log("Saving settings:", formData)
+const handleSave = async () => {
+  try {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/update-profile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: user?.id,
+        name: formData.name,
+        email: formData.email,
+        language: formData.language,
+        stack: formData.stack || [],
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      updateUser(data.user); // 🔥 Update global AuthContext
+      alert("Profile updated successfully!");
+    }
+  } catch (err) {
+    console.error(err);
   }
+};
+
 
   const handleLogout = async () => {
     await logout()
@@ -146,3 +170,5 @@ export default function SettingsPage() {
     </ProtectedLayout>
   )
 }
+
+

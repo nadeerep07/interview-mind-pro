@@ -8,6 +8,7 @@ import userStatsRoutes from "./routes/userStatsRoutes";
 import { dailyQuestionRouter } from "./routes/dailyQuestionRoutes";
 import updateStackRoutes from "./routes/updateStackRoutes";
 import vocabRouter from "./routes/vocabRoutes";
+import updateUserProfileRoutes from "./routes/profileRoute";
 
 
 console.log("GROQ KEY LOADED IN INDEX:", process.env.GROQ_API_KEY);
@@ -26,6 +27,7 @@ app.use("/api", userStatsRoutes);
 app.use("/api/daily-question", dailyQuestionRouter);
 app.use("/api", updateStackRoutes);
 app.use("/api/vocab", vocabRouter);
+app.use("/api/user/", updateUserProfileRoutes);
 
 
 
