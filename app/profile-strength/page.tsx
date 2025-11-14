@@ -1,44 +1,192 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { GlassCard, GradientText, StatsCard } from "@/components/animated-components"
 import { ProgressBar } from "@/components/progress-bar"
 import { useAuth } from "@/lib/auth-context"
-import { TrendingUp, Award, Target } from "lucide-react"
+import { TrendingUp, Award, Target, Loader2 } from "lucide-react"
+
+interface UserStats {
+  userId: string
+  profileStrength: number
+  sessionsCompleted: number
+  wordsLearned: number
+  streakDays: number
+  lastSessionDate: string | null
+  communicationScore: number
+  technicalKnowledge: number
+  confidence: number
+  recentSessions: {
+    title: string
+    score: number
+    date: string
+  }[]
+  upcomingChallenges: {
+    category: string
+    difficulty: string
+  }[]
+}
+
+interface CompetencyDistribution {
+  name: string
+  range: string
+  color: string
+  users: number
+}
 
 export default function ProfileStrengthPage() {
   const { user } = useAuth()
-  const [selectedPeriod, setSelectedPeriod] = useState("week")
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [distribution, setDistribution] = useState({
+  Expert: 0,
+  Advanced: 0,
+  Intermediate: 0,
+  Beginner: 0
+});
 
-  const strengthScores = {
-    communication: 72,
-    technical: 58,
-    problemSolving: 81,
-    confidence: 65,
-    clarity: 68,
-    bodyLanguage: 74,
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.id) return
+
+      try {
+        setLoading(true)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/stats/${user.id}`)
+        const data = await response.json()
+
+        if (data.success) {
+          setStats(data.stats)
+        } else {
+          setError("Failed to load stats")
+        }
+      } catch (err) {
+        setError("Error fetching stats")
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [user?.id])
+  useEffect(() => {
+  const fetchDistribution = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/stats/all/distribution`);
+      const data = await res.json();
+
+      if (data.success) {
+        setDistribution(data.distribution);
+      }
+    } catch (err) {
+      console.log("Distribution fetch error", err);
+    }
+  };
+
+  fetchDistribution();
+}, []);
+
+
+  if (loading) {
+    return (
+      <ProtectedLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-neon" />
+        </div>
+      </ProtectedLayout>
+    )
   }
 
-  const competencyLevels = [
-    { name: "Expert", range: "85-100", color: "text-green-400", users: 15 },
-    { name: "Advanced", range: "70-84", color: "text-blue-neon", users: 42 },
-    { name: "Intermediate", range: "55-69", color: "text-purple-neon", users: 58 },
-    { name: "Beginner", range: "0-54", color: "text-yellow-400", users: 28 },
-  ]
+  if (error || !stats) {
+    return (
+      <ProtectedLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <GlassCard className="p-8 text-center">
+            <p className="text-red-400">{error || "Unable to load profile data"}</p>
+          </GlassCard>
+        </div>
+      </ProtectedLayout>
+    )
+  }
 
-  const improvements = [
-    { date: "2 weeks ago", action: "Communication", improvement: "+8%" },
-    { date: "3 weeks ago", action: "Technical Knowledge", improvement: "+5%" },
-    { date: "1 month ago", action: "Confidence", improvement: "+12%" },
-  ]
+  // Calculate derived metrics
+  const strengthScores = {
+    communication: stats.communicationScore,
+    technical: stats.technicalKnowledge,
+    confidence: stats.confidence,
+    problemSolving: Math.round((stats.communicationScore + stats.technicalKnowledge) / 2),
+    clarity: Math.round((stats.communicationScore + stats.confidence) / 2),
+    resilience: Math.round((stats.technicalKnowledge + stats.confidence) / 2),
+  }
+
+  const overallScore = Math.round(
+    Object.values(strengthScores).reduce((sum, score) => sum + score, 0) / 
+    Object.keys(strengthScores).length
+  )
+
+  // Determine competency level
+  const getCompetencyLevel = (score: number) => {
+    if (score >= 85) return "Expert"
+    if (score >= 70) return "Advanced"
+    if (score >= 55) return "Intermediate"
+    return "Beginner"
+  }
+
+  const userLevel = getCompetencyLevel(overallScore)
+
+const competencyLevels = [
+  { name: "Expert", range: "85-100", color: "text-green-400", users: distribution.Expert },
+  { name: "Advanced", range: "70-84", color: "text-blue-neon", users: distribution.Advanced },
+  { name: "Intermediate", range: "55-69", color: "text-purple-neon", users: distribution.Intermediate },
+  { name: "Beginner", range: "0-54", color: "text-yellow-400", users: distribution.Beginner },
+];
+
+
+  // Calculate improvements from recent sessions
+  const improvements = stats.recentSessions
+    .slice(0, 3)
+    .map((session, index) => {
+      const previousScore = stats.recentSessions[index + 1]?.score || session.score - 5
+      const improvement = session.score - previousScore
+      return {
+        date: new Date(session.date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        action: session.title,
+        improvement: improvement > 0 ? `+${improvement}%` : `${improvement}%`,
+      }
+    })
+
+  // Find best competency
+  const bestCompetency = Object.entries(strengthScores).reduce((best, [key, value]) => 
+    value > best.value ? { key, value } : best
+  , { key: "", value: 0 })
+
+  const formatCompetencyName = (name: string) => 
+    name.replace(/([A-Z])/g, " $1").trim()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
 
   const recommendations = [
-    "Focus on technical depth - practice with coding challenges",
-    "Record yourself answering questions to improve body language",
-    "Work on structured problem-solving methodology",
-    "Join mock interview sessions with peers",
-  ]
+    stats.technicalKnowledge < 70 && "Focus on technical depth - practice with coding challenges",
+    stats.confidence < 70 && "Record yourself answering questions to improve body language",
+    stats.communicationScore < 70 && "Work on structured problem-solving methodology",
+    stats.sessionsCompleted < 10 && "Join mock interview sessions with peers",
+  ].filter(Boolean) as string[]
+
+  // Add default recommendations if none needed
+  if (recommendations.length === 0) {
+    recommendations.push(
+      "Keep practicing to maintain your excellent performance",
+      "Challenge yourself with harder difficulty levels",
+      "Help mentor others to reinforce your knowledge"
+    )
+  }
 
   return (
     <ProtectedLayout>
@@ -55,16 +203,30 @@ export default function ProfileStrengthPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatsCard
             label="Overall Score"
-            value="70"
+            value={overallScore.toString()}
             icon={<Award className="w-5 h-5" />}
-            trend={{ value: 5, isPositive: true }}
+            trend={{ 
+              value: stats.recentSessions.length > 1 
+                ? stats.recentSessions[0].score - stats.recentSessions[1].score 
+                : 0, 
+              isPositive: stats.recentSessions.length > 1 
+                ? stats.recentSessions[0].score > stats.recentSessions[1].score 
+                : true 
+            }}
           />
-          <StatsCard label="Best Competency" value="Problem Solving" icon={<Target className="w-5 h-5" />} />
+          <StatsCard 
+            label="Best Competency" 
+            value={formatCompetencyName(bestCompetency.key)} 
+            icon={<Target className="w-5 h-5" />} 
+          />
           <StatsCard
             label="Sessions Completed"
-            value="24"
+            value={stats.sessionsCompleted.toString()}
             icon={<TrendingUp className="w-5 h-5" />}
-            trend={{ value: 8, isPositive: true }}
+            trend={{ 
+              value: Math.min(stats.sessionsCompleted, 8), 
+              isPositive: true 
+            }}
           />
         </div>
 
@@ -78,7 +240,7 @@ export default function ProfileStrengthPage() {
                 <div key={competency}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-semibold text-foreground capitalize">
-                      {competency.replace(/([A-Z])/g, " $1").trim()}
+                      {formatCompetencyName(competency)}
                     </span>
                     <span
                       className={`text-sm font-bold ${
@@ -106,9 +268,11 @@ export default function ProfileStrengthPage() {
             <GlassCard className="space-y-4">
               <div className="text-center mb-4">
                 <div className="text-5xl font-bold mb-2">
-                  <GradientText>Intermediate</GradientText>
+                  <GradientText>{userLevel}</GradientText>
                 </div>
-                <p className="text-muted-foreground text-sm">Score: 55-69 range</p>
+                <p className="text-muted-foreground text-sm">
+                  Score: {overallScore}%
+                </p>
               </div>
 
               <div className="space-y-3 pt-4 border-t border-white/10">
@@ -127,18 +291,24 @@ export default function ProfileStrengthPage() {
         </div>
 
         {/* Recent Improvements */}
-        <div className="mt-8 space-y-4">
-          <h2 className="text-2xl font-bold text-foreground">Recent Improvements</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {improvements.map((item, index) => (
-              <GlassCard key={index} className="space-y-3">
-                <p className="text-sm text-muted-foreground">{item.date}</p>
-                <h4 className="font-semibold text-foreground">{item.action}</h4>
-                <span className="text-lg font-bold text-green-400">{item.improvement}</span>
-              </GlassCard>
-            ))}
+        {improvements.length > 0 && (
+          <div className="mt-8 space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Recent Improvements</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {improvements.map((item, index) => (
+                <GlassCard key={index} className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{item.date}</p>
+                  <h4 className="font-semibold text-foreground">{item.action}</h4>
+                  <span className={`text-lg font-bold ${
+                    item.improvement.startsWith('+') ? 'text-green-400' : 'text-yellow-400'
+                  }`}>
+                    {item.improvement}
+                  </span>
+                </GlassCard>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Recommendations */}
         <div className="mt-8 space-y-4">
@@ -154,6 +324,27 @@ export default function ProfileStrengthPage() {
             ))}
           </GlassCard>
         </div>
+
+        {/* Upcoming Challenges */}
+        {stats.upcomingChallenges.length > 0 && (
+          <div className="mt-8 space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Upcoming Challenges</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {stats.upcomingChallenges.map((challenge, index) => (
+                <GlassCard key={index} className="space-y-3">
+                  <h4 className="font-semibold text-foreground">{challenge.category}</h4>
+                  <span className={`text-sm font-medium ${
+                    challenge.difficulty === 'Hard' ? 'text-red-400' :
+                    challenge.difficulty === 'Medium' ? 'text-yellow-400' :
+                    'text-green-400'
+                  }`}>
+                    {challenge.difficulty}
+                  </span>
+                </GlassCard>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedLayout>
   )
