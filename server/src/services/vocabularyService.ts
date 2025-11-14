@@ -1,4 +1,4 @@
-import { Vocabulary } from "../models/Vocabulary"
+import { Vocabulary } from "../models/Word"
 
 export const vocabularyService = {
   async addWord(userId: string, word: string, meaning: string, exampleSentence: string) {
