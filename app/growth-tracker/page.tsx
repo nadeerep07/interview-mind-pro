@@ -1,56 +1,132 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { GlassCard, GlowButton, GradientText, StatsCard, AnimatedBadge } from "@/components/animated-components"
 import { CardGrid } from "@/components/card-grid"
 import { SimpleLineChart, SimpleBarChart } from "@/components/simple-chart"
 import { useAuth } from "@/lib/auth-context"
-import { TrendingUp, Calendar, Target, Zap } from "lucide-react"
+import { TrendingUp, Calendar, Target, Zap, Loader2 ,Rocket,Flame} from "lucide-react"
 
 export default function GrowthTrackerPage() {
   const { user } = useAuth()
+
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("month")
 
-  const scoreHistory = [
-    { label: "W1", value: 62 },
-    { label: "W2", value: 65 },
-    { label: "W3", value: 68 },
-    { label: "W4", value: 70 },
-  ]
+  // FETCH REAL USER STATS
+  useEffect(() => {
+    if (!user?.id) return
 
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/stats/${user.id}`)
+        const data = await res.json()
+
+        if (data.success) {
+          setStats(data.stats)
+        }
+      } catch (err) {
+        console.error("GrowthTracker: Failed to load stats", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [user?.id])
+
+  if (loading || !stats) {
+    return (
+      <ProtectedLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-neon" />
+        </div>
+      </ProtectedLayout>
+    )
+  }
+
+  // -----------------------------
+  // 🔥 REAL-TIME DERIVED METRICS
+  // -----------------------------
+
+  const overallProgress = Math.round(
+    (stats.communicationScore + stats.technicalKnowledge + stats.confidence) / 3
+  )
+
+  const sessionsThisMonth = stats.recentSessions.filter((s: any) => {
+    const d = new Date(s.date)
+    return d.getMonth() === new Date().getMonth()
+  }).length
+
+  const avgSessionScore =
+    stats.recentSessions.length > 0
+      ? Math.round(
+          stats.recentSessions.reduce((a: number, b: any) => a + b.score, 0) /
+            stats.recentSessions.length
+        )
+      : 0
+
+  // Score History Chart (REAL)
+  const scoreHistory = stats.recentSessions.map((s: any, index: number) => ({
+    label: `S${stats.recentSessions.length - index}`,
+    value: s.score,
+  }))
+
+  // Category Performance Chart (REAL)
   const categoryProgress = [
-    { label: "Comm", value: 72 },
-    { label: "Tech", value: 58 },
-    { label: "Problem", value: 81 },
-    { label: "Conf", value: 65 },
+    { label: "Comm", value: stats.communicationScore },
+    { label: "Tech", value: stats.technicalKnowledge },
+    { label: "Problem", value: Math.round((stats.communicationScore + stats.technicalKnowledge) / 2) },
+    { label: "Conf", value: stats.confidence },
   ]
 
+  // Dynamic Milestones
   const milestones = [
-    { title: "10 Sessions Completed", date: "2 weeks ago", status: "completed" },
-    { title: "Reached 70 Score", date: "1 week ago", status: "completed" },
-    { title: "Vocabulary Streak (7 days)", date: "3 days ago", status: "completed" },
-    { title: "Master All Categories", date: "In Progress", status: "in-progress" },
-  ]
-
-  const insights = [
     {
-      title: "Most Improved Area",
-      description: "Communication skills improved by 15% this month",
-      icon: "📈",
+      title: "Sessions Completed",
+      date: `${stats.sessionsCompleted} total`,
+      status: "completed",
     },
     {
-      title: "Consistency Award",
-      description: "You have a 5-day practice streak!",
-      icon: "🔥",
+      title: "Vocabulary Learned",
+      date: `${stats.wordsLearned} words`,
+      status: stats.wordsLearned >= 20 ? "completed" : "in-progress",
     },
     {
-      title: "Next Goal",
-      description: "Reach 75+ overall score next week",
-      icon: "🎯",
+      title: "Current Streak",
+      date: `${stats.streakDays} days`,
+      status: stats.streakDays >= 5 ? "completed" : "in-progress",
+    },
+    {
+      title: "Overall Score Goal",
+      date: `${overallProgress}% achieved`,
+      status: overallProgress >= 70 ? "completed" : "in-progress",
     },
   ]
 
+  // Dynamic Insights
+ const insights = [
+  {
+    title: "Most Improved Area",
+    description:
+      stats.communicationScore > stats.technicalKnowledge
+        ? "Communication has shown the strongest growth"
+        : "Technical Skills have shown the strongest improvement",
+    icon: <Rocket className="w-6 h-6 text-purple-neon" />,
+  },
+  {
+    title: "Consistency",
+    description: `You currently have a ${stats.streakDays}-day streak!`,
+    icon: <Flame className="w-6 h-6 text-orange-400" />,
+  },
+  {
+    title: "Next Goal",
+    description: `Aim for ${overallProgress + 5}% next month`,
+    icon: <Target className="w-6 h-6 text-green-400" />,
+  },
+]
   return (
     <ProtectedLayout>
       <div className="p-8 max-w-6xl mx-auto">
@@ -59,10 +135,12 @@ export default function GrowthTrackerPage() {
           <h1 className="text-4xl font-bold text-foreground mb-2">
             Growth <GradientText>Tracker</GradientText>
           </h1>
-          <p className="text-muted-foreground">Monitor your interview preparation progress over time</p>
+          <p className="text-muted-foreground">
+            Monitor your interview preparation progress over time
+          </p>
         </div>
 
-        {/* Time Range Selection */}
+        {/* Time Range Selector */}
         <div className="flex gap-3 mb-8">
           {["week", "month", "3months", "6months"].map((range) => (
             <button
@@ -82,24 +160,28 @@ export default function GrowthTrackerPage() {
           ))}
         </div>
 
-        {/* Key Stats */}
+        {/* Key Stats (REAL DATA) */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <StatsCard
             label="Overall Progress"
-            value="32%"
+            value={`${overallProgress}%`}
             icon={<TrendingUp className="w-5 h-5" />}
-            trend={{ value: 8, isPositive: true }}
+            trend={{ value: 5, isPositive: true }}
           />
           <StatsCard
             label="Sessions This Month"
-            value="12"
+            value={sessionsThisMonth.toString()}
             icon={<Calendar className="w-5 h-5" />}
-            trend={{ value: 3, isPositive: true }}
+            trend={{ value: 1, isPositive: true }}
           />
-          <StatsCard label="Current Streak" value="5 days" icon={<Zap className="w-5 h-5" />} />
+          <StatsCard
+            label="Current Streak"
+            value={`${stats.streakDays} days`}
+            icon={<Zap className="w-5 h-5" />}
+          />
           <StatsCard
             label="Avg Session Score"
-            value="70.2"
+            value={avgSessionScore.toString()}
             icon={<Target className="w-5 h-5" />}
             trend={{ value: 2, isPositive: true }}
           />
@@ -107,14 +189,20 @@ export default function GrowthTrackerPage() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Score Progression */}
           <GlassCard className="p-6">
-            <SimpleLineChart data={scoreHistory} title="Overall Score Progression" height={250} />
+            <SimpleLineChart
+              data={scoreHistory}
+              title="Overall Score Progression"
+              height={250}
+            />
           </GlassCard>
 
-          {/* Category Performance */}
           <GlassCard className="p-6">
-            <SimpleBarChart data={categoryProgress} title="Category Performance" height={250} />
+            <SimpleBarChart
+              data={categoryProgress}
+              title="Category Performance"
+              height={250}
+            />
           </GlassCard>
         </div>
 
@@ -135,6 +223,7 @@ export default function GrowthTrackerPage() {
         {/* Milestones */}
         <div className="mt-8 space-y-6">
           <h2 className="text-2xl font-bold text-foreground">Milestones</h2>
+
           <div className="space-y-3">
             {milestones.map((milestone, index) => (
               <GlassCard key={index} className="flex items-center justify-between p-6">
@@ -144,12 +233,16 @@ export default function GrowthTrackerPage() {
                       milestone.status === "completed" ? "bg-green-400" : "bg-purple-neon"
                     }`}
                   ></div>
+
                   <div>
                     <h4 className="font-semibold text-foreground">{milestone.title}</h4>
                     <p className="text-sm text-muted-foreground">{milestone.date}</p>
                   </div>
                 </div>
-                <AnimatedBadge>{milestone.status === "completed" ? "✓ Done" : "In Progress"}</AnimatedBadge>
+
+                <AnimatedBadge>
+                  {milestone.status === "completed" ? "✓ Done" : "In Progress"}
+                </AnimatedBadge>
               </GlassCard>
             ))}
           </div>
@@ -158,22 +251,31 @@ export default function GrowthTrackerPage() {
         {/* Recommendations */}
         <div className="mt-8 space-y-6">
           <h2 className="text-2xl font-bold text-foreground">Next Steps</h2>
+
           <GlassCard className="p-6 space-y-4">
             <p className="text-foreground">Based on your progress, here's what we recommend:</p>
+
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <span className="text-purple-neon font-bold">1.</span>
-                <span className="text-foreground">Focus on technical interview preparation - your weakest area</span>
+                <span className="text-foreground">
+                  Improve technical interview preparation
+                </span>
               </li>
               <li className="flex gap-3">
                 <span className="text-purple-neon font-bold">2.</span>
-                <span className="text-foreground">Maintain your current momentum with daily vocabulary reviews</span>
+                <span className="text-foreground">
+                  Maintain your streak and daily vocabulary reviews
+                </span>
               </li>
               <li className="flex gap-3">
                 <span className="text-purple-neon font-bold">3.</span>
-                <span className="text-foreground">Join a mock interview session this week to practice with others</span>
+                <span className="text-foreground">
+                  Join a mock interview session this week
+                </span>
               </li>
             </ul>
+
             <GlowButton variant="primary" size="lg" className="w-full mt-6">
               View Personalized Plan
             </GlowButton>
