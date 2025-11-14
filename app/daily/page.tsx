@@ -1,102 +1,118 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useEffect, useRef, useState } from "react"
-import { ProtectedLayout } from "@/components/protected-layout"
-import { GlassCard, GlowButton, GradientText, LoadingSpinner } from "@/components/animated-components"
-import { TextareaField } from "@/components/textarea-field"
-import { SelectField } from "@/components/select-field"
-import { useAuth } from "@/lib/auth-context"
-import { Mic, Send } from "lucide-react"
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { ProtectedLayout } from "@/components/protected-layout";
+import {
+  GlassCard,
+  GlowButton,
+  GradientText,
+  LoadingSpinner,
+} from "@/components/animated-components";
+import { TextareaField } from "@/components/textarea-field";
+import { SelectField } from "@/components/select-field";
+import { useAuth } from "@/lib/auth-context";
+import { Mic, Send } from "lucide-react";
 
 export default function DailyChallengePage() {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
-  const [category, setCategory] = useState<"behavioral" | "technical" | "case">("behavioral")
-  const [userResponse, setUserResponse] = useState("")
-  const [submitted, setSubmitted] = useState<any>(null)
-  const [isRecording, setIsRecording] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [category, setCategory] = useState<"behavioral" | "technical" | "case">(
+    "behavioral"
+  );
+  const [userResponse, setUserResponse] = useState("");
+  const [submitted, setSubmitted] = useState<any>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dailyQuestion, setDailyQuestion] = useState("");
+  const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
+  const [refreshQuestion, setRefreshQuestion] = useState(0);
 
-  const recognitionRef = useRef<any>(null)
+  const recognitionRef = useRef<any>(null);
 
   // Initialize voice recognition
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+    async function loadQuestion() {
+      setIsLoadingQuestion(true);
 
-      if (SpeechRecognition) {
-        const recog = new SpeechRecognition()
-        recog.continuous = true
-        recog.interimResults = true
-        recog.lang = "en-US"
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/daily-question?category=${category}`
+        );
 
-        recog.onresult = (event: any) => {
-          const text = Array.from(event.results)
-            .map((r: any) => r[0].transcript)
-            .join("")
+        const data = await res.json();
 
-          setUserResponse(text)
+        if (data.success) {
+          setDailyQuestion(data.question);
+        } else {
+          setDailyQuestion("Failed to load today's question.");
         }
-
-        recog.onerror = (e: any) => console.error("Speech recognition error:", e)
-
-        recognitionRef.current = recog
+      } catch (error) {
+        console.error("Failed to fetch question:", error);
+        setDailyQuestion("Error loading question.");
       }
-    }
-  }, [])
 
-  const dailyQuestion = {
-    behavioral: "Why do you want to work at this company and what attracts you to this role?",
-    technical: "Explain the difference between stack and queue data structures and when to use each.",
-    case: "How would you approach improving user engagement for a social media app?",
-  }
+      setIsLoadingQuestion(false);
+    }
+
+    loadQuestion();
+  }, [category, refreshQuestion]); // 👈 add refreshQuestion
 
   // Submit to Groq API
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const userId = user?.id;
+
+    if (!userId) {
+      console.error("Missing userId");
+      return;
+    }
 
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: dailyQuestion[category],
-          userResponse,
-          interviewType: category,
-        }),
-      })
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/analyze`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: dailyQuestion,
+            userResponse,
+            interviewType: category,
+            userId: userId,
+          }),
+        }
+      );
 
-      const data = await res.json()
+      const data = await res.json();
 
-      if (!data.success) throw new Error(data.error)
+      if (!data.success) throw new Error(data.error);
 
-      setSubmitted(data.analysis)
+      setSubmitted(data.analysis);
     } catch (err) {
-      console.error("Analysis error:", err)
+      console.error("Analysis error:", err);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   // Start recording
   const handleRecordStart = () => {
     if (!recognitionRef.current) {
-      alert("Voice recording not supported in your browser.")
-      return
+      alert("Voice recording not supported in your browser.");
+      return;
     }
-    setIsRecording(true)
-    recognitionRef.current.start()
-  }
+    setIsRecording(true);
+    recognitionRef.current.start();
+  };
 
   // Stop recording
   const handleRecordStop = () => {
-    if (!recognitionRef.current) return
-    setIsRecording(false)
-    recognitionRef.current.stop()
-  }
+    if (!recognitionRef.current) return;
+    setIsRecording(false);
+    recognitionRef.current.stop();
+  };
 
   return (
     <ProtectedLayout>
@@ -106,7 +122,9 @@ export default function DailyChallengePage() {
           <h1 className="text-4xl font-bold text-foreground mb-2">
             Daily <GradientText>Challenge</GradientText>
           </h1>
-          <p className="text-muted-foreground">Practice your interview skills with today's question</p>
+          <p className="text-muted-foreground">
+            Practice your interview skills with today's question
+          </p>
         </div>
 
         <div className="space-y-6">
@@ -115,9 +133,11 @@ export default function DailyChallengePage() {
             label="Interview Category"
             value={category}
             onChange={(e) => {
-              setCategory(e.target.value as "behavioral" | "technical" | "case")
-              setUserResponse("")
-              setSubmitted(null)
+              setCategory(
+                e.target.value as "behavioral" | "technical" | "case"
+              );
+              setUserResponse("");
+              setSubmitted(null);
             }}
             options={[
               { value: "behavioral", label: "Behavioral Interview" },
@@ -129,7 +149,9 @@ export default function DailyChallengePage() {
           {/* Daily Question */}
           <GlassCard className="space-y-4 p-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-foreground">Today's Question</h2>
+              <h2 className="text-2xl font-bold text-foreground">
+                Today's Question
+              </h2>
               <span className="text-sm font-semibold text-purple-neon">
                 {new Date().toLocaleDateString("en-US", {
                   month: "short",
@@ -138,7 +160,13 @@ export default function DailyChallengePage() {
               </span>
             </div>
             <p className="text-lg text-foreground leading-relaxed">
-              {dailyQuestion[category]}
+              {isLoadingQuestion ? (
+                <span className="text-muted-foreground">
+                  Loading question...
+                </span>
+              ) : (
+                dailyQuestion
+              )}
             </p>
           </GlassCard>
 
@@ -196,27 +224,37 @@ export default function DailyChallengePage() {
           ) : (
             /* AI Feedback Panel */
             <GlassCard className="space-y-6 p-6">
-              <h3 className="text-2xl font-bold text-foreground mb-4">AI Feedback</h3>
+              <h3 className="text-2xl font-bold text-foreground mb-4">
+                AI Feedback
+              </h3>
 
               {/* Scores */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-white/10 border border-white/10 rounded-lg">
                   <p className="text-sm text-muted-foreground">Overall Score</p>
-                  <p className="text-2xl font-bold">{submitted.overallScore}/10</p>
+                  <p className="text-2xl font-bold">
+                    {submitted.overallScore}/10
+                  </p>
                 </div>
                 <div className="p-4 bg-white/10 border border-white/10 rounded-lg">
                   <p className="text-sm text-muted-foreground">Communication</p>
-                  <p className="text-2xl font-bold">{submitted.communicationScore}/10</p>
+                  <p className="text-2xl font-bold">
+                    {submitted.communicationScore}/10
+                  </p>
                 </div>
                 <div className="p-4 bg-white/10 border border-white/10 rounded-lg">
                   <p className="text-sm text-muted-foreground">Clarity</p>
-                  <p className="text-2xl font-bold">{submitted.clarityScore}/10</p>
+                  <p className="text-2xl font-bold">
+                    {submitted.clarityScore}/10
+                  </p>
                 </div>
               </div>
 
               {/* Strengths */}
               <div>
-                <h4 className="text-lg font-semibold text-foreground">Strengths</h4>
+                <h4 className="text-lg font-semibold text-foreground">
+                  Strengths
+                </h4>
                 <ul className="list-disc ml-6 space-y-1">
                   {submitted.strengths?.map((item: string, i: number) => (
                     <li key={i}>{item}</li>
@@ -226,7 +264,9 @@ export default function DailyChallengePage() {
 
               {/* Improvements */}
               <div>
-                <h4 className="text-lg font-semibold text-foreground">Areas to Improve</h4>
+                <h4 className="text-lg font-semibold text-foreground">
+                  Areas to Improve
+                </h4>
                 <ul className="list-disc ml-6 space-y-1">
                   {submitted.improvements?.map((item: string, i: number) => (
                     <li key={i}>{item}</li>
@@ -250,8 +290,9 @@ export default function DailyChallengePage() {
                 size="lg"
                 className="w-full"
                 onClick={() => {
-                  setSubmitted(null)
-                  setUserResponse("")
+                  setSubmitted(null);
+                  setUserResponse("");
+                  setRefreshQuestion((prev) => prev + 1); 
                 }}
               >
                 Try Another Question
@@ -261,5 +302,5 @@ export default function DailyChallengePage() {
         </div>
       </div>
     </ProtectedLayout>
-  )
+  );
 }

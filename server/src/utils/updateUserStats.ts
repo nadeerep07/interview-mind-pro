@@ -12,19 +12,18 @@ export async function updateUserStats(userId: string, analysis: any) {
   const last = stats.lastSessionDate;
 
   if (!last) {
-    // first session ever
-    stats.streakDays = 1;
+    stats.streakDays = 1; // first time ever
   } else if (new Date(last).toDateString() === today) {
-    // same day → do nothing
+    // same day -> do nothing
   } else {
     const diff =
       (new Date(today).getTime() - new Date(last).getTime()) /
       (1000 * 60 * 60 * 24);
 
     if (diff === 1) {
-      stats.streakDays += 1; // consecutive day
+      stats.streakDays += 1; // streak continues
     } else {
-      stats.streakDays = 1; // streak broken
+      stats.streakDays = 0; // streak broken
     }
   }
 
@@ -32,8 +31,9 @@ export async function updateUserStats(userId: string, analysis: any) {
 
   // ---- BASIC STATS ----
   stats.sessionsCompleted += 1;
+
+  // Increase profile strength per session (max 100)
   stats.profileStrength = Math.min(100, stats.profileStrength + 5);
-  stats.wordsLearned += analysis.tips?.length || 0;
 
   // ---- SCORE EXTRACTION ----
   stats.communicationScore = analysis.communicationScore;

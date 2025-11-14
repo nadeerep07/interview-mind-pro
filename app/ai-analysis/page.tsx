@@ -74,7 +74,6 @@ export default function AIAnalysisPage() {
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAnalyzing(true);
-  const userId = user?._id || user?.id;
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/analyze`,
@@ -85,7 +84,7 @@ export default function AIAnalysisPage() {
             question,
             userResponse: response,
             interviewType,
-            userId: userId,
+            userId: user?.id,
           }),
         }
       );
