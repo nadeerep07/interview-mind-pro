@@ -1,4 +1,4 @@
-import { Interview } from "../models/Interview"
+import { Interview } from "../models/UserStats"
 import { Growth } from "../models/Growth"
 import { groqService } from "./groqService"
 

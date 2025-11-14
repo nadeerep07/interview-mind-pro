@@ -1,10 +1,10 @@
 import "../src/loadEnv";  // MUST BE FIRST, above everything
-
 import express from "express";
 import cors from "cors";
 import { connectDB } from "./config/db";
 import authRoutes from "./routes/authRoutes";
 import aiAnalysisRoutes from "./routes/aiAnalysisRoutes";
+import userStatsRoutes from "./routes/userStatsRoutes";
 
 console.log("GROQ KEY LOADED IN INDEX:", process.env.GROQ_API_KEY);
 
@@ -18,6 +18,8 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api", aiAnalysisRoutes);
+app.use("/api", userStatsRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("API Running...");
