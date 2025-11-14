@@ -33,16 +33,16 @@ export interface IUserStats extends Document {
   }[];
   milestones: IMilestone[];
 }
-
 const MilestoneSchema = new Schema<IMilestone>({
-  title: { type: String, required: true },
-  type: { type: String, required: true },
-  target: { type: Number, required: true },
+  title: { type: String, default: "" },
+  type: { type: String, default: "general" },
+  target: { type: Number, default: 0 },
   current: { type: Number, default: 0 },
   deadline: { type: String },
   completed: { type: Boolean, default: false },
   createdAt: { type: Date, default: () => new Date() },
 });
+
 
 const UserStatsSchema = new Schema<IUserStats>({
   userId: { type: String, required: true, unique: true },

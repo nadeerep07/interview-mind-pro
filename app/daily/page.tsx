@@ -14,12 +14,19 @@ import { SelectField } from "@/components/select-field";
 import { useAuth } from "@/lib/auth-context";
 import { Mic, Send } from "lucide-react";
 
-export default function DailyChallengePage() {
+export default function PracticeArenaPage() {
   const { user } = useAuth();
 
-  const [category, setCategory] = useState<"behavioral" | "technical" | "case">(
-    "behavioral"
-  );
+  // Interview category (behavioral | technical | case)
+  const [category, setCategory] = useState<
+    "behavioral" | "technical" | "case"
+  >("behavioral");
+
+  // Difficulty level (beginner | intermediate | advanced)
+  const [difficulty, setDifficulty] = useState<
+    "beginner" | "intermediate" | "advanced"
+  >("beginner");
+
   const [userResponse, setUserResponse] = useState("");
   const [submitted, setSubmitted] = useState<any>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -31,39 +38,85 @@ export default function DailyChallengePage() {
   const recognitionRef = useRef<any>(null);
 
   // =============================
-  // Load Daily Question
+  // Initialize SpeechRecognition (same behaviour as your AIAnalysisPage)
   // =============================
-useEffect(() => {
-  if (!user) return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-  async function loadQuestion() {
-    setIsLoadingQuestion(true);
+    const SpeechRecognition =
+      (window as any).webkitSpeechRecognition ||
+      (window as any).SpeechRecognition;
 
-    try {
-        const stackParam = encodeURIComponent(
-          JSON.stringify(user?.stack ?? [])
-        );
-  
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/daily-question?category=${category}&stack=${stackParam}`
-        );
-
-      const data = await res.json();
-      setDailyQuestion(data.success ? data.question : "Failed to load.");
-    } catch (err) {
-      console.error(err);
-      setDailyQuestion("Error loading question.");
+    if (!SpeechRecognition) {
+      recognitionRef.current = null;
+      return;
     }
 
-    setIsLoadingQuestion(false);
-  }
+    const recog = new SpeechRecognition();
+    recog.continuous = true;
+    recog.interimResults = true;
+    recog.lang = "en-US";
 
-  loadQuestion();
-}, [category, refreshQuestion, user?.stack?.length]);
+    recog.onresult = (event: any) => {
+      // Combine transcripts from results
+      const text = Array.from(event.results)
+        .map((r: any) => r[0].transcript)
+        .join("");
+      setUserResponse(text);
+    };
 
+    recog.onerror = (err: any) => {
+      console.error("Speech error:", err);
+    };
+
+    recognitionRef.current = recog;
+
+    // cleanup on unmount
+    return () => {
+      try {
+        if (recognitionRef.current) {
+          recognitionRef.current.onresult = null;
+          recognitionRef.current.onerror = null;
+          recognitionRef.current.stop?.();
+        }
+      } catch (e) {
+        // ignore
+      }
+      recognitionRef.current = null;
+    };
+  }, []);
 
   // =============================
-  // Submit Answer
+  // Load Daily Question (Practice Arena)
+  // =============================
+  useEffect(() => {
+    if (!user) return;
+
+    async function loadQuestion() {
+      setIsLoadingQuestion(true);
+
+      try {
+        const stackParam = encodeURIComponent(JSON.stringify(user?.stack ?? []));
+        const difficultyParam = encodeURIComponent(difficulty);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/daily-question?category=${category}&difficulty=${difficultyParam}&stack=${stackParam}`
+        );
+
+        const data = await res.json();
+        setDailyQuestion(data.success ? data.question : "Failed to load question.");
+      } catch (err) {
+        console.error("Failed loading question:", err);
+        setDailyQuestion("Error loading question.");
+      } finally {
+        setIsLoadingQuestion(false);
+      }
+    }
+
+    loadQuestion();
+  }, [category, difficulty, refreshQuestion, user?.stack?.length]);
+
+  // =============================
+  // Submit Answer (Get AI Feedback)
   // =============================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,52 +126,61 @@ useEffect(() => {
 
     if (!userId) {
       console.error("Missing userId");
+      setIsSubmitting(false);
       return;
     }
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/analyze`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            question: dailyQuestion,
-            userResponse,
-            interviewType: category,
-            userId: userId,
-          }),
-        }
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: dailyQuestion,
+          userResponse,
+          interviewType: category,
+          difficulty,
+          userId,
+        }),
+      });
 
       const data = await res.json();
 
-      if (!data.success) throw new Error(data.error);
+      if (!data.success) throw new Error(data.error || "Analysis failed");
 
       setSubmitted(data.analysis);
     } catch (err) {
       console.error("Analysis error:", err);
+      // you may want to add toast/error UI here
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // =============================
-  // Recording Handlers
+  // Recording Handlers (same UX as AIAnalysisPage)
   // =============================
   const handleRecordStart = () => {
     if (!recognitionRef.current) {
       alert("Voice recording not supported in your browser.");
       return;
     }
-    setIsRecording(true);
-    recognitionRef.current.start();
+    try {
+      recognitionRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Failed to start recording:", err);
+    }
   };
 
   const handleRecordStop = () => {
     if (!recognitionRef.current) return;
-    setIsRecording(false);
-    recognitionRef.current.stop();
+    try {
+      recognitionRef.current.stop();
+    } catch (err) {
+      console.error("Failed to stop recording:", err);
+    } finally {
+      setIsRecording(false);
+    }
   };
 
   return (
@@ -127,7 +189,7 @@ useEffect(() => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            Daily <GradientText>Challenge</GradientText>
+            Practice <GradientText>Arena</GradientText>
           </h1>
           <p className="text-muted-foreground">
             Practice your interview skills with today's question
@@ -135,14 +197,12 @@ useEffect(() => {
         </div>
 
         <div className="space-y-6">
-          {/* Category Selection */}
+          {/* Category Selection (behavioral/technical/case) */}
           <SelectField
             label="Interview Category"
             value={category}
             onChange={(e) => {
-              setCategory(
-                e.target.value as "behavioral" | "technical" | "case"
-              );
+              setCategory(e.target.value as "behavioral" | "technical" | "case");
               setUserResponse("");
               setSubmitted(null);
             }}
@@ -153,12 +213,26 @@ useEffect(() => {
             ]}
           />
 
+          {/* Difficulty Selection */}
+          <SelectField
+            label="Difficulty"
+            value={difficulty}
+            onChange={(e) => {
+              setDifficulty(e.target.value as "beginner" | "intermediate" | "advanced");
+              setUserResponse("");
+              setSubmitted(null);
+            }}
+            options={[
+              { value: "beginner", label: "Beginner" },
+              { value: "intermediate", label: "Intermediate" },
+              { value: "advanced", label: "Advanced" },
+            ]}
+          />
+
           {/* Daily Question */}
           <GlassCard className="space-y-4 p-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-foreground">
-                Today's Question
-              </h2>
+              <h2 className="text-2xl font-bold text-foreground">Today's Question</h2>
               <span className="text-sm font-semibold text-purple-neon">
                 {new Date().toLocaleDateString("en-US", {
                   month: "short",
@@ -166,22 +240,18 @@ useEffect(() => {
                 })}
               </span>
             </div>
+
             <p className="text-lg text-foreground leading-relaxed">
               {isLoadingQuestion ? (
-                <span className="text-muted-foreground">
-                  Loading question...
-                </span>
+                <span className="text-muted-foreground">Loading question...</span>
               ) : (
-                dailyQuestion
+                dailyQuestion || "No question available."
               )}
             </p>
           </GlassCard>
 
-          {/* Answer Form */}
+          {/* Answer Form / Result */}
           {!submitted ? (
-            /* =============================
-               SUBMIT FORM
-            ============================== */
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
                 <TextareaField
@@ -206,6 +276,19 @@ useEffect(() => {
                   >
                     <Mic className="w-4 h-4" />
                     {isRecording ? "Stop Recording" : "Record Answer"}
+                  </button>
+
+                  {/* Try another question (local refresh) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRefreshQuestion((p) => p + 1);
+                      setSubmitted(null);
+                      setUserResponse("");
+                    }}
+                    className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 hover:bg-white/20 font-semibold"
+                  >
+                    Refresh Question
                   </button>
                 </div>
               </div>
@@ -232,39 +315,26 @@ useEffect(() => {
               </GlowButton>
             </form>
           ) : (
-            /* =============================
-               AI FEEDBACK PANEL
-            ============================== */
             <GlassCard className="space-y-6 p-6">
-              <h3 className="text-2xl font-bold text-foreground mb-4">
-                AI Feedback
-              </h3>
+              <h3 className="text-2xl font-bold text-foreground mb-4">AI Feedback</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-white/10 border border-white/10 rounded-lg">
                   <p className="text-sm text-muted-foreground">Overall Score</p>
-                  <p className="text-2xl font-bold">
-                    {submitted.overallScore}/10
-                  </p>
+                  <p className="text-2xl font-bold">{submitted.overallScore}/10</p>
                 </div>
                 <div className="p-4 bg-white/10 border border-white/10 rounded-lg">
                   <p className="text-sm text-muted-foreground">Communication</p>
-                  <p className="text-2xl font-bold">
-                    {submitted.communicationScore}/10
-                  </p>
+                  <p className="text-2xl font-bold">{submitted.communicationScore}/10</p>
                 </div>
                 <div className="p-4 bg-white/10 border border-white/10 rounded-lg">
                   <p className="text-sm text-muted-foreground">Clarity</p>
-                  <p className="text-2xl font-bold">
-                    {submitted.clarityScore}/10
-                  </p>
+                  <p className="text-2xl font-bold">{submitted.clarityScore}/10</p>
                 </div>
               </div>
 
               <div>
-                <h4 className="text-lg font-semibold text-foreground">
-                  Strengths
-                </h4>
+                <h4 className="text-lg font-semibold text-foreground">Strengths</h4>
                 <ul className="list-disc ml-6 space-y-1">
                   {submitted.strengths?.map((item: string, i: number) => (
                     <li key={i}>{item}</li>
@@ -273,9 +343,7 @@ useEffect(() => {
               </div>
 
               <div>
-                <h4 className="text-lg font-semibold text-foreground">
-                  Areas to Improve
-                </h4>
+                <h4 className="text-lg font-semibold text-foreground">Areas to Improve</h4>
                 <ul className="list-disc ml-6 space-y-1">
                   {submitted.improvements?.map((item: string, i: number) => (
                     <li key={i}>{item}</li>

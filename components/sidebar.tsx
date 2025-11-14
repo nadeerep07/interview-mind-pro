@@ -6,7 +6,7 @@ import { GlassWrapper, GradientTextWrapper } from "./glass-wrapper"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/daily", label: "Daily Challenge", icon: Target },
+  { href: "/daily", label: "Practice Arena", icon: Target },
   { href: "/ai-analysis", label: "AI Analysis", icon: Brain },
   { href: "/vocab-helper", label: "Vocab Helper", icon: BookOpen },
   { href: "/profile-strength", label: "Profile Strength", icon: BarChart3 },

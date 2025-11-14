@@ -180,13 +180,17 @@ export default function GrowthTrackerPage() {
     });
   }
 
-  const filteredSessions = filterByRange(stats.recentSessions, timeRange);
+  const filteredSessions = filterByRange(stats.recentSessions || [], timeRange);
 
   // -----------------------------
-  // 🔥 REAL METRICS (Range Based)
+  // 🔥 REAL METRICS (Range Based) - WITH NULL CHECKS
   // -----------------------------
+  const communicationScore = stats.communicationScore || 0;
+  const technicalKnowledge = stats.technicalKnowledge || 0;
+  const confidence = stats.confidence || 0;
+
   const overallProgress = Math.round(
-    (stats.communicationScore + stats.technicalKnowledge + stats.confidence) / 3
+    (communicationScore + technicalKnowledge + confidence) / 3
   );
 
   const sessionsInRange = filteredSessions.length;
@@ -194,36 +198,40 @@ export default function GrowthTrackerPage() {
   const avgSessionScore =
     filteredSessions.length > 0
       ? Math.round(
-          filteredSessions.reduce((a: number, b: any) => a + b.score, 0) /
+          filteredSessions.reduce((a: number, b: any) => a + (b.score || 0), 0) /
             filteredSessions.length
         )
       : 0;
 
-  // Score History (Range-based)
-  const scoreHistory = filteredSessions.map((s: any, index: number) => ({
-    label: `S${filteredSessions.length - index}`,
-    value: s.score,
-  }));
+  // Score History (Range-based) - WITH NULL CHECKS
+  const scoreHistory = filteredSessions.length > 0 
+    ? filteredSessions.map((s: any, index: number) => ({
+        label: `S${filteredSessions.length - index}`,
+        value: s.score || 0,
+      }))
+    : [
+        { label: "S1", value: 0 },
+        { label: "S2", value: 0 },
+        { label: "S3", value: 0 },
+      ];
 
-  // Category Performance (Range-based)
+  // Category Performance (Range-based) - WITH NULL CHECKS
   const categoryProgress = [
     {
       label: "Comm",
-      value: stats.communicationScore,
+      value: communicationScore,
     },
     {
       label: "Tech",
-      value: stats.technicalKnowledge,
+      value: technicalKnowledge,
     },
     {
       label: "Problem",
-      value: Math.round(
-        (stats.communicationScore + stats.technicalKnowledge) / 2
-      ),
+      value: Math.round((communicationScore + technicalKnowledge) / 2),
     },
     {
       label: "Conf",
-      value: stats.confidence,
+      value: confidence,
     },
   ];
 
@@ -234,7 +242,7 @@ export default function GrowthTrackerPage() {
     {
       title: "Most Improved Area",
       description:
-        stats.communicationScore > stats.technicalKnowledge
+        communicationScore > technicalKnowledge
           ? "Communication is your strongest trend this period"
           : "Technical skills have shown more growth in this range",
       icon: <Rocket className="w-6 h-6 text-purple-neon" />,
@@ -300,7 +308,7 @@ export default function GrowthTrackerPage() {
 
           <StatsCard
             label="Current Streak"
-            value={`${stats.streakDays} days`}
+            value={`${stats.streakDays || 0} days`}
             icon={<Zap className="w-5 h-5" />}
           />
 
@@ -508,7 +516,7 @@ export default function GrowthTrackerPage() {
               body: JSON.stringify({ userId: user?.id, ...goal }),
             }
           );
-console.log("Saving milestone for:", user?.id);
+          console.log("Saving milestone for:", user?.id);
           // Refresh stats after saving
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/api/user/stats/${user?.id}`

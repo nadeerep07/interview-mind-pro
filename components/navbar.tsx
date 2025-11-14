@@ -42,7 +42,7 @@ export default function Navbar() {
                   Dashboard
                 </Link>
                 <Link href="/daily" className="text-foreground hover:text-purple-400">
-                  Daily Challenge
+                  Practice Arena
                 </Link>
                 <Link href="/ai-analysis" className="text-foreground hover:text-purple-400">
                   AI Analysis

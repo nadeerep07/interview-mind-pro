@@ -10,86 +10,87 @@ const groq = new Groq({
 dailyQuestionRouter.get("/", async (req, res) => {
   try {
     const category = (req.query.category as string) || "behavioral";
+    const difficulty = (req.query.difficulty as string) || "beginner";
 
-    //  NEW — parse stack array coming from frontend
+    // Parse stack from frontend
     let stack: string[] = [];
     if (req.query.stack) {
       try {
         stack = JSON.parse(req.query.stack as string);
-      } catch (err) {
+      } catch {
         console.log("Invalid stack JSON");
       }
     }
 
-    //  NEW — dynamic prompt based on category + stack
     let prompt = "";
-    console.log("Category:", category);
-    if (category === "technical") {
-      prompt = `
-You are generating a *fresher-level technical interview question*.
 
-Stacks provided: ${
-        stack.length > 0 ? stack.join(", ") : "General Software Engineering"
+    if (category === "technical") {
+      // Choose 1 stack randomly
+      const chosenStack =
+        stack.length > 0
+          ? stack[Math.floor(Math.random() * stack.length)]
+          : "General Software Engineering";
+
+      let difficultyRules = "";
+
+      if (difficulty === "beginner") {
+        difficultyRules = `
+- Ask super simple, direct questions.
+- No code-heavy questions.
+- No tricky wording.
+- Focus on definitions and basic concepts.
+- Example: "What is a widget in Flutter?"
+        `;
       }
 
-Follow these rules STRICTLY:
+      if (difficulty === "intermediate") {
+        difficultyRules = `
+- Ask practical questions used in day-to-day development.
+- Allow mild debugging scenarios.
+- Use lifecycle, state management, async, build methods, hooks.
+- Example: "Explain how setState works in Flutter."
+        `;
+      }
 
-❌ HARD RULES — DO NOT ASK:
-- No "Design a system..."
-- No "Design a function..."
-- No system design questions at all
-- No architecture-level questions
-- No algorithms or DSA questions
-- No trees, graphs, tries, heaps, DP, complexities
-- No math-heavy or research questions
-- No advanced optimization or distributed systems topics
+      if (difficulty === "advanced") {
+        difficultyRules = `
+- Ask deeper conceptual questions.
+- You may ask about rendering, memory, performance, advanced state mgmt.
+- Internal framework architecture allowed.
+- Example: "How does Flutter’s rendering pipeline convert widgets → elements → render objects?"
+        `;
+      }
 
-✔ ALLOWED QUESTION TYPES (PICK ONLY ONE):
-- **theoretical** (meaning, concept, definition)
-- **why/how** questions (explain why X happens in this stack)
-- **basic practical** (how to use a common feature)
-- **debugging** (simple error scenario)
-- **best practices** (fresher-level)
+      prompt = `
+Generate a *${difficulty}-level* technical interview question for the stack: ${chosenStack}
 
-❗ VERY IMPORTANT:
-- If multiple stacks are provided, choose **ONLY ONE** stack randomly & ask about that stack.
-- The question MUST mention the chosen stack.  
-  Example: “In React, what is the purpose of useEffect?”
-- The question must be **1–2 sentences maximum**.
-- KEEP IT VERY SIMPLE — college student level.
-- NO system design phrasing, no complexity, no architecture.
+STRICT RULES:
+${difficultyRules}
+
+General Rules:
+- 1–2 sentences maximum.
+- NO system design of distributed systems.
+- NO DSA/algorithm questions.
+- Must NOT repeat common textbook questions.
+- Must feel like a real interview question.
 - Only output the question text. No explanation.
-
-### GOOD EXAMPLES:
-"In React, what is the difference between state and props?"
-"In Node.js, what does the event loop do?"
-"In MongoDB, what is a collection and how is it different from a table?"
-"In Express.js, what is middleware used for?"
-"In SQL, what is the purpose of a primary key?"
-"In JavaScript, what does '===’ compare?"
-
-### NOW GENERATE:
-ONE very simple fresher-level technical interview question based ONLY on the chosen stack.`;
+`;
     } else {
+      // Behavioral & Case
       prompt = `
 Generate ONE fresh, unique ${category} interview question.
 
 Rules:
 - Only output the question text.
 - Must be fresher-friendly.
-- Must NOT repeat common textbook questions.
+- Must not repeat common textbook questions.
 - No explanation.
-`;
+      `;
     }
 
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      messages: [{ role: "user", content: prompt }],
     });
 
     const question =

@@ -13,20 +13,30 @@ interface SimpleLineChartProps {
 }
 
 export function SimpleLineChart({ data, title, height = 300 }: SimpleLineChartProps) {
-  if (data.length === 0) return null
+  if (!data || data.length === 0) return null
 
-  const maxValue = Math.max(...data.map((d) => d.value))
-  const minValue = Math.min(...data.map((d) => d.value))
-  const range = maxValue - minValue || 1
-
-  const pointWidth = 100 / (data.length - 1 || 1)
-  const points = data.map((d, i) => ({
-    x: i * pointWidth,
-    y: ((maxValue - d.value) / range) * 100,
+  // Sanitize values
+  const safeData = data.map((d) => ({
     ...d,
+    value: Number.isFinite(d.value) ? d.value : 0,
   }))
 
-  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ")
+  const maxValue = Math.max(...safeData.map((d) => d.value), 1)
+  const minValue = Math.min(...safeData.map((d) => d.value), 0)
+  const range = maxValue - minValue || 1
+
+  const pointWidth = safeData.length > 1 ? 100 / (safeData.length - 1) : 100
+
+  const points = safeData.map((d, i) => {
+    const x = i * pointWidth
+    const rawY = ((maxValue - d.value) / range) * 100
+    const y = Number.isFinite(rawY) ? rawY : 0
+    return { x, y, ...d }
+  })
+
+  const pathD = points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+    .join(" ")
 
   return (
     <div className="space-y-4">
@@ -41,7 +51,7 @@ export function SimpleLineChart({ data, title, height = 300 }: SimpleLineChartPr
           {/* Line */}
           <path d={pathD} fill="none" stroke="url(#gradient)" strokeWidth="2" />
 
-          {/* Gradient Definition */}
+          {/* Gradient */}
           <defs>
             <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#a855f7" />
@@ -49,7 +59,7 @@ export function SimpleLineChart({ data, title, height = 300 }: SimpleLineChartPr
             </linearGradient>
           </defs>
 
-          {/* Data Points */}
+          {/* Points */}
           {points.map((p, i) => (
             <circle key={i} cx={p.x} cy={p.y} r="1.5" fill="currentColor" />
           ))}
@@ -66,10 +76,16 @@ interface SimpleBarChartProps {
 }
 
 export function SimpleBarChart({ data, title, height = 300 }: SimpleBarChartProps) {
-  if (data.length === 0) return null
+  if (!data || data.length === 0) return null
 
-  const maxValue = Math.max(...data.map((d) => d.value))
-  const barWidth = 100 / data.length
+  // Sanitize values
+  const safeData = data.map((d) => ({
+    ...d,
+    value: Number.isFinite(d.value) ? d.value : 0,
+  }))
+
+  const maxValue = Math.max(...safeData.map((d) => d.value), 1)
+  const barWidth = 100 / safeData.length
   const colors = ["#a855f7", "#3b82f6", "#06b6d4", "#8b5cf6"]
 
   return (
@@ -77,22 +93,33 @@ export function SimpleBarChart({ data, title, height = 300 }: SimpleBarChartProp
       {title && <h3 className="font-semibold text-foreground">{title}</h3>}
       <svg width="100%" height={height} viewBox="0 0 100 100">
         <g>
-          {/* Bars */}
-          {data.map((d, i) => {
-            const barHeight = (d.value / maxValue) * 80
+          {safeData.map((d, i) => {
+            const rawHeight = (d.value / maxValue) * 80
+            const barHeight = Number.isFinite(rawHeight) ? rawHeight : 0
+
             const x = i * barWidth + barWidth * 0.1
             const width = barWidth * 0.8
             const y = 100 - barHeight
+
             const color = d.color || colors[i % colors.length]
 
-            return <rect key={i} x={x} y={y} width={width} height={barHeight} fill={color} opacity="0.8" />
+            return (
+              <rect
+                key={i}
+                x={x}
+                y={Number.isFinite(y) ? y : 0}
+                width={width}
+                height={Number.isFinite(barHeight) ? barHeight : 0}
+                fill={color}
+                opacity="0.8"
+              />
+            )
           })}
         </g>
       </svg>
 
-      {/* Labels */}
       <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground">
-        {data.map((d, i) => (
+        {safeData.map((d, i) => (
           <div key={i} className="text-center truncate">
             {d.label}
           </div>
