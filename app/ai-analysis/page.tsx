@@ -76,15 +76,18 @@ export default function AIAnalysisPage() {
     setIsAnalyzing(true);
 
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question,
-          userResponse: response,
-          interviewType,
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/analyze`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question,
+            userResponse: response,
+            interviewType,
+          }),
+        }
+      );
 
       const data = await res.json();
 
@@ -257,14 +260,14 @@ ${analysis.tips.map((t: string) => `- ${t}`).join("\n")}`;
                 <AnalysisResultCard
                   title="Areas to Improve"
                   category="improvements"
-                  score={analysis.clarityScore} 
+                  score={analysis.clarityScore}
                   items={analysis.improvements}
                 />
 
                 <AnalysisResultCard
                   title="Pro Tips"
                   category="tips"
-                  score={analysis.confidenceScore} 
+                  score={analysis.confidenceScore}
                   items={analysis.tips}
                 />
               </div>

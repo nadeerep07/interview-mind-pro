@@ -1,10 +1,13 @@
+import "../src/loadEnv";  // MUST BE FIRST, above everything
+
 import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
 import { connectDB } from "./config/db";
 import authRoutes from "./routes/authRoutes";
+import aiAnalysisRoutes from "./routes/aiAnalysisRoutes";
 
-dotenv.config();
+console.log("GROQ KEY LOADED IN INDEX:", process.env.GROQ_API_KEY);
+
 connectDB();
 
 const app = express();
@@ -13,8 +16,8 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-// Routes
 app.use("/api/auth", authRoutes);
+app.use("/api", aiAnalysisRoutes);
 
 app.get("/", (req, res) => {
   res.send("API Running...");
