@@ -6,7 +6,7 @@ import { GlassCard, GlowButton, GradientText, StatsCard, AnimatedBadge } from "@
 import { CardGrid } from "@/components/card-grid"
 import { SimpleLineChart, SimpleBarChart } from "@/components/simple-chart"
 import { useAuth } from "@/lib/auth-context"
-import { TrendingUp, Calendar, Target, Zap, Loader2 ,Rocket,Flame} from "lucide-react"
+import { TrendingUp, Calendar, Target, Zap, Loader2, Rocket, Flame } from "lucide-react"
 
 export default function GrowthTrackerPage() {
   const { user } = useAuth()
@@ -15,7 +15,9 @@ export default function GrowthTrackerPage() {
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("month")
 
-  // FETCH REAL USER STATS
+  // -----------------------------
+  // 🔥 FETCH REAL USER STATS
+  // -----------------------------
   useEffect(() => {
     if (!user?.id) return
 
@@ -48,41 +50,81 @@ export default function GrowthTrackerPage() {
   }
 
   // -----------------------------
-  // 🔥 REAL-TIME DERIVED METRICS
+  // 🔥 RANGE FILTERING UTILITY
   // -----------------------------
+  function filterByRange(sessions: any[], range: string) {
+    const now = new Date();
 
+    return sessions.filter((session: any) => {
+      const date = new Date(session.date);
+      const days = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (range === "week") return days <= 7;
+      if (range === "month") return date.getMonth() === now.getMonth();
+      if (range === "3months") {
+        const diffMonths =
+          (now.getFullYear() - date.getFullYear()) * 12 +
+          (now.getMonth() - date.getMonth());
+        return diffMonths <= 3;
+      }
+      if (range === "6months") {
+        const diffMonths =
+          (now.getFullYear() - date.getFullYear()) * 12 +
+          (now.getMonth() - date.getMonth());
+        return diffMonths <= 6;
+      }
+      return true;
+    });
+  }
+
+  const filteredSessions = filterByRange(stats.recentSessions, timeRange)
+
+  // -----------------------------
+  // 🔥 REAL METRICS (Range Based)
+  // -----------------------------
   const overallProgress = Math.round(
     (stats.communicationScore + stats.technicalKnowledge + stats.confidence) / 3
   )
 
-  const sessionsThisMonth = stats.recentSessions.filter((s: any) => {
-    const d = new Date(s.date)
-    return d.getMonth() === new Date().getMonth()
-  }).length
+  const sessionsInRange = filteredSessions.length
 
   const avgSessionScore =
-    stats.recentSessions.length > 0
+    filteredSessions.length > 0
       ? Math.round(
-          stats.recentSessions.reduce((a: number, b: any) => a + b.score, 0) /
-            stats.recentSessions.length
+          filteredSessions.reduce((a: number, b: any) => a + b.score, 0) /
+            filteredSessions.length
         )
       : 0
 
-  // Score History Chart (REAL)
-  const scoreHistory = stats.recentSessions.map((s: any, index: number) => ({
-    label: `S${stats.recentSessions.length - index}`,
+  // Score History (Range-based)
+  const scoreHistory = filteredSessions.map((s: any, index: number) => ({
+    label: `S${filteredSessions.length - index}`,
     value: s.score,
   }))
 
-  // Category Performance Chart (REAL)
+  // Category Performance (Range-based)
   const categoryProgress = [
-    { label: "Comm", value: stats.communicationScore },
-    { label: "Tech", value: stats.technicalKnowledge },
-    { label: "Problem", value: Math.round((stats.communicationScore + stats.technicalKnowledge) / 2) },
-    { label: "Conf", value: stats.confidence },
+    {
+      label: "Comm",
+      value: stats.communicationScore
+    },
+    {
+      label: "Tech",
+      value: stats.technicalKnowledge
+    },
+    {
+      label: "Problem",
+      value: Math.round((stats.communicationScore + stats.technicalKnowledge) / 2),
+    },
+    {
+      label: "Conf",
+      value: stats.confidence,
+    },
   ]
 
-  // Dynamic Milestones
+  // -----------------------------
+  // 🔥 Milestones (Global)
+  // -----------------------------
   const milestones = [
     {
       title: "Sessions Completed",
@@ -106,27 +148,30 @@ export default function GrowthTrackerPage() {
     },
   ]
 
-  // Dynamic Insights
- const insights = [
-  {
-    title: "Most Improved Area",
-    description:
-      stats.communicationScore > stats.technicalKnowledge
-        ? "Communication has shown the strongest growth"
-        : "Technical Skills have shown the strongest improvement",
-    icon: <Rocket className="w-6 h-6 text-purple-neon" />,
-  },
-  {
-    title: "Consistency",
-    description: `You currently have a ${stats.streakDays}-day streak!`,
-    icon: <Flame className="w-6 h-6 text-orange-400" />,
-  },
-  {
-    title: "Next Goal",
-    description: `Aim for ${overallProgress + 5}% next month`,
-    icon: <Target className="w-6 h-6 text-green-400" />,
-  },
-]
+  // -----------------------------
+  // 🔥 Insights (Range-based)
+  // -----------------------------
+  const insights = [
+    {
+      title: "Most Improved Area",
+      description:
+        stats.communicationScore > stats.technicalKnowledge
+          ? "Communication is your strongest trend this period"
+          : "Technical skills have shown more growth in this range",
+      icon: <Rocket className="w-6 h-6 text-purple-neon" />,
+    },
+    {
+      title: "Consistency",
+      description: `You completed ${filteredSessions.length} sessions in this period`,
+      icon: <Flame className="w-6 h-6 text-orange-400" />,
+    },
+    {
+      title: "Next Goal",
+      description: `Aim for +5% improvement by next ${timeRange}`,
+      icon: <Target className="w-6 h-6 text-green-400" />,
+    },
+  ]
+
   return (
     <ProtectedLayout>
       <div className="p-8 max-w-6xl mx-auto">
@@ -166,24 +211,24 @@ export default function GrowthTrackerPage() {
             label="Overall Progress"
             value={`${overallProgress}%`}
             icon={<TrendingUp className="w-5 h-5" />}
-            trend={{ value: 5, isPositive: true }}
           />
+
           <StatsCard
-            label="Sessions This Month"
-            value={sessionsThisMonth.toString()}
+            label="Sessions"
+            value={sessionsInRange.toString()}
             icon={<Calendar className="w-5 h-5" />}
-            trend={{ value: 1, isPositive: true }}
           />
+
           <StatsCard
             label="Current Streak"
             value={`${stats.streakDays} days`}
             icon={<Zap className="w-5 h-5" />}
           />
+
           <StatsCard
-            label="Avg Session Score"
+            label="Avg Score"
             value={avgSessionScore.toString()}
             icon={<Target className="w-5 h-5" />}
-            trend={{ value: 2, isPositive: true }}
           />
         </div>
 
@@ -192,7 +237,7 @@ export default function GrowthTrackerPage() {
           <GlassCard className="p-6">
             <SimpleLineChart
               data={scoreHistory}
-              title="Overall Score Progression"
+              title="Score Progression"
               height={250}
             />
           </GlassCard>
@@ -212,7 +257,7 @@ export default function GrowthTrackerPage() {
           <CardGrid cols={3}>
             {insights.map((insight, index) => (
               <GlassCard key={index} className="space-y-4">
-                <div className="text-4xl">{insight.icon}</div>
+                <div>{insight.icon}</div>
                 <h3 className="font-bold text-foreground">{insight.title}</h3>
                 <p className="text-sm text-muted-foreground">{insight.description}</p>
               </GlassCard>
@@ -258,21 +303,15 @@ export default function GrowthTrackerPage() {
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <span className="text-purple-neon font-bold">1.</span>
-                <span className="text-foreground">
-                  Improve technical interview preparation
-                </span>
+                <span className="text-foreground">Focus on technical improvement</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-purple-neon font-bold">2.</span>
-                <span className="text-foreground">
-                  Maintain your streak and daily vocabulary reviews
-                </span>
+                <span className="text-foreground">Maintain your streak</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-purple-neon font-bold">3.</span>
-                <span className="text-foreground">
-                  Join a mock interview session this week
-                </span>
+                <span className="text-foreground">Increase session frequency</span>
               </li>
             </ul>
 
