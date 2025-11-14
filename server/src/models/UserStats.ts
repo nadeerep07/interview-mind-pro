@@ -1,4 +1,16 @@
+// models/UserStats.ts
 import mongoose, { Schema, Document } from "mongoose";
+
+export interface IMilestone {
+  _id?: string;
+  title: string;
+  type: string; // score, sessions, streak, vocab
+  target: number;
+  current: number;
+  deadline?: string;
+  completed: boolean;
+  createdAt?: Date;
+}
 
 export interface IUserStats extends Document {
   userId: string;
@@ -19,7 +31,18 @@ export interface IUserStats extends Document {
     category: string;
     difficulty: string;
   }[];
+  milestones: IMilestone[];
 }
+
+const MilestoneSchema = new Schema<IMilestone>({
+  title: { type: String, required: true },
+  type: { type: String, required: true },
+  target: { type: Number, required: true },
+  current: { type: Number, default: 0 },
+  deadline: { type: String },
+  completed: { type: Boolean, default: false },
+  createdAt: { type: Date, default: () => new Date() },
+});
 
 const UserStatsSchema = new Schema<IUserStats>({
   userId: { type: String, required: true, unique: true },
@@ -48,6 +71,9 @@ const UserStatsSchema = new Schema<IUserStats>({
       difficulty: String,
     },
   ],
+
+  // user-created milestones (replaces defaults in UI)
+  milestones: [MilestoneSchema],
 });
 
 export default mongoose.model<IUserStats>("UserStats", UserStatsSchema);
