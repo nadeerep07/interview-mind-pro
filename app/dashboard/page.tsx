@@ -16,7 +16,7 @@ import Link from "next/link";
 import { Brain, Zap, Target, TrendingUp, BookOpen } from "lucide-react";
 import { StackSelectorModal } from "@/components/stack-selector-modal";
 
-// 📊 Charts
+// Charts
 import {
   LineChart,
   Line,
@@ -32,65 +32,76 @@ import {
 import { User } from "@/lib/types";
 
 export default function DashboardPage() {
-  const { user,setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showStackModal, setShowStackModal] = useState(false);
 
+  // SHOW STACK MODAL ONLY IF STACK NOT SELECTED
   useEffect(() => {
     if (user && (!user.stack || user.stack.length === 0)) {
       setShowStackModal(true);
     }
   }, [user]);
 
-  // 🔥 NEW — Save stack
-const saveStack = async (selectedStacks: string[]) => {
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/update-stack`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user?.id,
-        stack: selectedStacks,
-      }),
-    });
+  // SAVE STACK
+  const saveStack = async (selectedStacks: string[]) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/update-stack`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user?.id,
+            stack: selectedStacks,
+          }),
+        }
+      );
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.success) {
-      const updatedUser: User = {
-        id: user!.id,
-        name: user!.name,
-        email: user!.email,
-        stack: selectedStacks,
-        createdAt: "",
-        updatedAt: ""
-      };
+      if (data.success && user) {
+        const updatedUser: User = {
+          ...user,
+          stack: selectedStacks,
+          createdAt: user.createdAt ?? new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
 
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      setShowStackModal(false);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        setShowStackModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to save stack:", err);
     }
-  } catch (err) {
-    console.error("Failed to save stack:", err);
-  }
-};
+  };
 
-
+  // FETCH USER STATS
   useEffect(() => {
     if (!user) return;
 
     const fetchStats = async () => {
       try {
-        const userId = user.id;
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/user/stats/${userId}`
+          `${process.env.NEXT_PUBLIC_API_URL}/api/user/stats/${user.id}`
         );
-        const data = await res.json();
 
+        const data = await res.json();
         const s = data.stats || {};
 
-        // Apply all defaults (fixes the crash)
+        // FINAL FIX — ALWAYS VALID ARRAY
+const safeUpcomingChallenges =
+  Array.isArray(s.upcomingChallenges) && s.upcomingChallenges.length > 0
+    ? s.upcomingChallenges
+    : [
+        { category: "Behavioral", difficulty: "Intermediate" },
+        { category: "Technical", difficulty: "Hard" },
+        { category: "Case Study", difficulty: "Medium" },
+      ];
+
+
         setStats({
           profileStrength: s.profileStrength ?? 0,
           sessionsCompleted: s.sessionsCompleted ?? 0,
@@ -102,11 +113,7 @@ const saveStack = async (selectedStacks: string[]) => {
           confidence: s.confidence ?? 0,
 
           recentSessions: s.recentSessions ?? [],
-          upcomingChallenges: s.upcomingChallenges ?? [
-            { category: "Behavioral", difficulty: "Intermediate" },
-            { category: "Technical", difficulty: "Hard" },
-            { category: "Case Study", difficulty: "Medium" },
-          ],
+          upcomingChallenges: safeUpcomingChallenges,
         });
       } catch (err) {
         console.error("Stats fetch failed", err);
@@ -128,14 +135,14 @@ const saveStack = async (selectedStacks: string[]) => {
     );
   }
 
-  // 📊 Radar chart data
+  // Radar chart data
   const radarData = [
     { skill: "Communication", value: stats.communicationScore },
     { skill: "Technical", value: stats.technicalKnowledge },
     { skill: "Confidence", value: stats.confidence },
   ];
 
-  // 📈 Performance trend (recent session scores)
+  // Line chart data
   const lineData = stats.recentSessions.map((s: any) => ({
     name: s.date,
     score: s.score,
@@ -143,12 +150,13 @@ const saveStack = async (selectedStacks: string[]) => {
 
   return (
     <ProtectedLayout>
-      {/* 🔥 Stack Modal Rendered Here */}
+      {/* Stack Modal */}
       <StackSelectorModal
         isOpen={showStackModal}
         onSubmit={saveStack}
         onClose={() => setShowStackModal(false)}
       />
+
       <div className="p-8 space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -195,9 +203,9 @@ const saveStack = async (selectedStacks: string[]) => {
           </CardGrid>
         </div>
 
-        {/* Analytics Section */}
+        {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 📈 Performance Trend Line Chart */}
+          {/* Line Chart */}
           <GlassCard className="lg:col-span-2 p-6">
             <h2 className="text-xl font-bold mb-4">Performance Trend</h2>
             {lineData.length === 0 ? (
@@ -221,7 +229,7 @@ const saveStack = async (selectedStacks: string[]) => {
             )}
           </GlassCard>
 
-          {/* 🎯 Skills Radar Chart */}
+          {/* Radar Chart */}
           <GlassCard className="p-6">
             <h2 className="text-xl font-bold mb-4">Skill Breakdown</h2>
             <div className="w-full h-64">
@@ -289,7 +297,7 @@ const saveStack = async (selectedStacks: string[]) => {
             </div>
           </div>
 
-          {/* Profile Strength */}
+          {/* Profile Strength Breakdown */}
           <div>
             <h2 className="text-xl font-bold text-foreground mb-4">
               Profile Strength
@@ -301,7 +309,6 @@ const saveStack = async (selectedStacks: string[]) => {
                 showPercentage
               />
 
-              {/* Breakdown */}
               <div className="space-y-3 pt-4 border-t border-white/10">
                 <p className="text-sm text-muted-foreground">Communication</p>
                 <ProgressBar value={stats.communicationScore} />
@@ -322,11 +329,12 @@ const saveStack = async (selectedStacks: string[]) => {
           </div>
         </div>
 
-        {/* Upcoming Challenges */}
+        {/* UPCOMING CHALLENGES (NOW FIXED) */}
         <div>
           <h2 className="text-xl font-bold text-foreground mb-4">
             Upcoming Challenges
           </h2>
+
           <CardGrid cols={3}>
             {stats.upcomingChallenges.map((challenge: any, idx: number) => (
               <GlassCard key={idx} className="flex flex-col gap-4 p-4">
@@ -334,12 +342,15 @@ const saveStack = async (selectedStacks: string[]) => {
                   <Target className="w-6 h-6 text-purple-neon" />
                   <AnimatedBadge>{challenge.difficulty}</AnimatedBadge>
                 </div>
+
                 <h3 className="font-semibold text-foreground">
                   {challenge.category} Interview
                 </h3>
+
                 <p className="text-sm text-muted-foreground flex-1">
                   Practice {challenge.category.toLowerCase()} interview skills
                 </p>
+
                 <GlowButton variant="secondary" size="sm" className="w-full">
                   Start Challenge
                 </GlowButton>

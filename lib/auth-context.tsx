@@ -7,19 +7,13 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  stack?: string[];
-};
+import { User } from "@/lib/types";
 
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-   setUser: (u: User | null) => void;
+  setUser: (u: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -40,13 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem("user");
 
     if (token && storedUser) {
-      const parsed = JSON.parse(storedUser);
+      const data = JSON.parse(storedUser);
 
-      // Normalize ID
       const normalizedUser: User = {
-        id: parsed.userId || parsed.id || parsed._id,
-        name: parsed.name,
-        email: parsed.email,
+        id: data.userId || data.id || data._id,
+        name: data.name,
+        email: data.email,
+        stack: data.stack || [],
+        createdAt: data.createdAt ?? "",
+        updatedAt: data.updatedAt ?? "",
       };
 
       setUser(normalizedUser);
@@ -80,6 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: data.user.name,
       email: data.user.email,
       stack: data.user.stack || [],
+      createdAt: data.user.createdAt ?? "",
+      updatedAt: data.user.updatedAt ?? "",
     };
 
     localStorage.setItem("token", data.token);
@@ -113,6 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: data.user.userId || data.user.id || data.user._id,
       name: data.user.name,
       email: data.user.email,
+      stack: data.user.stack || [],
+      createdAt: data.user.createdAt ?? "",
+      updatedAt: data.user.updatedAt ?? "",
     };
 
     localStorage.setItem("token", data.token);

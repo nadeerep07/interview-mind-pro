@@ -7,43 +7,61 @@ export async function updateUserStats(userId: string, analysis: any) {
     stats = new UserStats({ userId });
   }
 
-  // ---- STREAK LOGIC ----
+  // ------------------------
+  // 🔥 DAILY STREAK LOGIC
+  // ------------------------
   const today = new Date().toDateString();
   const last = stats.lastSessionDate;
 
   if (!last) {
-    stats.streakDays = 1; // first time ever
-  } else if (new Date(last).toDateString() === today) {
-    // same day -> do nothing
-  } else {
+    stats.streakDays = 1;
+  } else if (new Date(last).toDateString() !== today) {
     const diff =
       (new Date(today).getTime() - new Date(last).getTime()) /
       (1000 * 60 * 60 * 24);
 
-    if (diff === 1) {
-      stats.streakDays += 1; // streak continues
-    } else {
-      stats.streakDays = 0; // streak broken
-    }
+    stats.streakDays = diff === 1 ? stats.streakDays + 1 : 1;
   }
 
   stats.lastSessionDate = today;
 
-  // ---- BASIC STATS ----
+  // ------------------------
+  // 🔥 SESSION COUNT
+  // ------------------------
   stats.sessionsCompleted += 1;
 
-  // Increase profile strength per session (max 100)
+  // Profile strength boost (max 100)
   stats.profileStrength = Math.min(100, stats.profileStrength + 5);
 
-  // ---- SCORE EXTRACTION ----
-  stats.communicationScore = analysis.communicationScore;
-  stats.technicalKnowledge = analysis.clarityScore;
-  stats.confidence = analysis.confidenceScore;
+  if (analysis.fromDailyQuestion === true && analysis.dailyQuestion) {
+    const dq = analysis.dailyQuestion;
 
-  // ---- RECENT SESSIONS ----
+    stats.communicationScore = dq.communicationScore ?? stats.communicationScore;
+    stats.confidence = dq.confidenceScore ?? stats.confidence;
+    stats.technicalKnowledge = dq.clarityScore ?? stats.technicalKnowledge;
+  } else {
+    // fallback for practice sessions
+    stats.communicationScore = analysis.communicationScore ?? stats.communicationScore;
+    stats.confidence = analysis.confidenceScore ?? stats.confidence;
+    stats.technicalKnowledge = analysis.clarityScore ?? stats.technicalKnowledge;
+  }
+
+  // ------------------------
+  // 🔥 RECENT SESSION HISTORY
+  // ------------------------
+  const sessionTitle =
+    analysis.fromDailyQuestion === true
+      ? "Daily Question Attempt"
+      : "AI Practice Session";
+
+  const sessionScore =
+    analysis.dailyQuestion?.overallScore ??
+    analysis.overallScore ??
+    0;
+
   stats.recentSessions.unshift({
-    title: "AI Practice Session",
-    score: analysis.overallScore,
+    title: sessionTitle,
+    score: sessionScore,
     date: today,
   });
 
