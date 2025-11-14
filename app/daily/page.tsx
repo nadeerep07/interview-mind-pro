@@ -30,35 +30,41 @@ export default function DailyChallengePage() {
 
   const recognitionRef = useRef<any>(null);
 
-  // Initialize voice recognition
-  useEffect(() => {
-    async function loadQuestion() {
-      setIsLoadingQuestion(true);
+  // =============================
+  // Load Daily Question
+  // =============================
+useEffect(() => {
+  if (!user) return;
 
-      try {
+  async function loadQuestion() {
+    setIsLoadingQuestion(true);
+
+    try {
+        const stackParam = encodeURIComponent(
+          JSON.stringify(user?.stack ?? [])
+        );
+  
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/daily-question?category=${category}`
+          `${process.env.NEXT_PUBLIC_API_URL}/api/daily-question?category=${category}&stack=${stackParam}`
         );
 
-        const data = await res.json();
-
-        if (data.success) {
-          setDailyQuestion(data.question);
-        } else {
-          setDailyQuestion("Failed to load today's question.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch question:", error);
-        setDailyQuestion("Error loading question.");
-      }
-
-      setIsLoadingQuestion(false);
+      const data = await res.json();
+      setDailyQuestion(data.success ? data.question : "Failed to load.");
+    } catch (err) {
+      console.error(err);
+      setDailyQuestion("Error loading question.");
     }
 
-    loadQuestion();
-  }, [category, refreshQuestion]); // 👈 add refreshQuestion
+    setIsLoadingQuestion(false);
+  }
 
-  // Submit to Groq API
+  loadQuestion();
+}, [category, refreshQuestion, user?.stack?.length]);
+
+
+  // =============================
+  // Submit Answer
+  // =============================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -97,7 +103,9 @@ export default function DailyChallengePage() {
     }
   };
 
-  // Start recording
+  // =============================
+  // Recording Handlers
+  // =============================
   const handleRecordStart = () => {
     if (!recognitionRef.current) {
       alert("Voice recording not supported in your browser.");
@@ -107,7 +115,6 @@ export default function DailyChallengePage() {
     recognitionRef.current.start();
   };
 
-  // Stop recording
   const handleRecordStop = () => {
     if (!recognitionRef.current) return;
     setIsRecording(false);
@@ -172,6 +179,9 @@ export default function DailyChallengePage() {
 
           {/* Answer Form */}
           {!submitted ? (
+            /* =============================
+               SUBMIT FORM
+            ============================== */
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
                 <TextareaField
@@ -222,13 +232,14 @@ export default function DailyChallengePage() {
               </GlowButton>
             </form>
           ) : (
-            /* AI Feedback Panel */
+            /* =============================
+               AI FEEDBACK PANEL
+            ============================== */
             <GlassCard className="space-y-6 p-6">
               <h3 className="text-2xl font-bold text-foreground mb-4">
                 AI Feedback
               </h3>
 
-              {/* Scores */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-white/10 border border-white/10 rounded-lg">
                   <p className="text-sm text-muted-foreground">Overall Score</p>
@@ -250,7 +261,6 @@ export default function DailyChallengePage() {
                 </div>
               </div>
 
-              {/* Strengths */}
               <div>
                 <h4 className="text-lg font-semibold text-foreground">
                   Strengths
@@ -262,7 +272,6 @@ export default function DailyChallengePage() {
                 </ul>
               </div>
 
-              {/* Improvements */}
               <div>
                 <h4 className="text-lg font-semibold text-foreground">
                   Areas to Improve
@@ -274,7 +283,6 @@ export default function DailyChallengePage() {
                 </ul>
               </div>
 
-              {/* Tips */}
               <div>
                 <h4 className="text-lg font-semibold text-foreground">Tips</h4>
                 <ul className="list-disc ml-6 space-y-1">
@@ -292,7 +300,7 @@ export default function DailyChallengePage() {
                 onClick={() => {
                   setSubmitted(null);
                   setUserResponse("");
-                  setRefreshQuestion((prev) => prev + 1); 
+                  setRefreshQuestion((prev) => prev + 1);
                 }}
               >
                 Try Another Question

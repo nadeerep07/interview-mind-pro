@@ -12,12 +12,14 @@ type User = {
   id: string;
   name: string;
   email: string;
+  stack?: string[];
 };
 
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+   setUser: (u: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -77,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: data.user.userId || data.user.id || data.user._id,
       name: data.user.name,
       email: data.user.email,
+      stack: data.user.stack || [],
     };
 
     localStorage.setItem("token", data.token);
@@ -137,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated,
+        setUser,
         login,
         register,
         logout,

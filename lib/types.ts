@@ -6,6 +6,7 @@ export interface User {
   profileStrength?: number
   createdAt: string
   updatedAt: string
+  stack?: string[]
 }
 
 export interface InterviewSession {
