@@ -33,12 +33,41 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+// models/UserStats.ts
 const mongoose_1 = __importStar(require("mongoose"));
-const UserSchema = new mongoose_1.Schema({
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
-    password: { type: String, required: true, minlength: 8 },
-    language: { type: String, default: "en" },
-    stack: { type: [String], default: [] },
-}, { timestamps: true });
-exports.default = mongoose_1.default.model("User", UserSchema);
+const MilestoneSchema = new mongoose_1.Schema({
+    title: { type: String, default: "" },
+    type: { type: String, default: "general" },
+    target: { type: Number, default: 0 },
+    current: { type: Number, default: 0 },
+    deadline: { type: String },
+    completed: { type: Boolean, default: false },
+    createdAt: { type: Date, default: () => new Date() },
+});
+const UserStatsSchema = new mongoose_1.Schema({
+    userId: { type: String, required: true, unique: true },
+    profileStrength: { type: Number, default: 0 },
+    sessionsCompleted: { type: Number, default: 0 },
+    wordsLearned: { type: Number, default: 0 },
+    streakDays: { type: Number, default: 0 },
+    lastSessionDate: { type: String, default: null },
+    communicationScore: { type: Number, default: 0 },
+    technicalKnowledge: { type: Number, default: 0 },
+    confidence: { type: Number, default: 0 },
+    recentSessions: [
+        {
+            title: String,
+            score: Number,
+            date: String,
+        },
+    ],
+    upcomingChallenges: [
+        {
+            category: String,
+            difficulty: String,
+        },
+    ],
+    // user-created milestones (replaces defaults in UI)
+    milestones: [MilestoneSchema],
+});
+exports.default = mongoose_1.default.model("UserStats", UserStatsSchema);

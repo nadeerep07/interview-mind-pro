@@ -4,6 +4,7 @@ import Link from "next/link"
 import { GlowButton } from "@/components/animated-components"
 import { GradientTextWrapper } from "@/components/glass-wrapper"
 import Navbar from "@/components/navbar" // ⬅ correct import (default export)
+import Footer from "@/components/footer"
 import { Brain, Zap, BarChart3, Users } from "lucide-react"
 
 export default function HomePage() {
@@ -111,9 +112,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 px-4 py-12 text-center text-muted-foreground text-sm">
-        © 2025 InterviewMind Pro. All rights reserved.
-      </footer>
+      <Footer />
     </div>
   )
 }
+

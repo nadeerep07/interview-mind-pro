@@ -5,22 +5,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authService = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const User_1 = require("../models/User");
-const auth_1 = require("../middleware/auth");
+const User_1 = __importDefault(require("../models/User"));
+const generateToken_1 = require("../utils/generateToken");
 exports.authService = {
     async register(email, password, name) {
-        const existingUser = await User_1.User.findOne({ email });
+        const existingUser = await User_1.default.findOne({ email });
         if (existingUser) {
             throw new Error("User already exists");
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-        const user = new User_1.User({
+        const user = new User_1.default({
             email,
             password: hashedPassword,
             name,
         });
         await user.save();
-        const token = (0, auth_1.generateToken)(user._id.toString());
+        const token = (0, generateToken_1.generateToken)(user._id.toString());
         return {
             token,
             user: {
@@ -31,7 +31,7 @@ exports.authService = {
         };
     },
     async login(email, password) {
-        const user = await User_1.User.findOne({ email });
+        const user = await User_1.default.findOne({ email });
         if (!user) {
             throw new Error("User not found");
         }
@@ -39,7 +39,7 @@ exports.authService = {
         if (!isPasswordValid) {
             throw new Error("Invalid password");
         }
-        const token = (0, auth_1.generateToken)(user._id.toString());
+        const token = (0, generateToken_1.generateToken)(user._id.toString());
         return {
             token,
             user: {
@@ -50,7 +50,7 @@ exports.authService = {
         };
     },
     async getCurrentUser(userId) {
-        const user = await User_1.User.findById(userId).select("-password");
+        const user = await User_1.default.findById(userId).select("-password");
         if (!user) {
             throw new Error("User not found");
         }
